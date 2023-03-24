@@ -122,7 +122,13 @@ document.getElementById( 'container' ).innerHTML = "";
 	 **/
 
 	function initPhysics() {
-		world = new CANNON.World();
+		var optiones = {
+			allowSleep: true,
+			quatNormalizeFast: true,
+			quatNormalizeSkip: 1
+		};
+
+		world = new CANNON.World(optiones);
 		world.broadphase = new CANNON.SAPBroadphase(world);
 		world.gravity.set(0, -9.82, 0);
 		world.defaultContactMaterial.friction = 1;
@@ -158,7 +164,45 @@ document.getElementById( 'container' ).innerHTML = "";
 			collisionFilterGroup: GROUP2,
 			collisionFilterMask: GROUP1
 		});
+
 		world.addBody(planeBody);
+	}
+
+	function initTrack() {
+		// Create a matrix of height values
+		const matrix: number[][] = [];
+		const sizeX = 20;
+		const sizeZ = 20;
+		for (let i = 0; i < sizeX; i++) {
+			matrix.push([]);
+			for (let j = 0; j < sizeZ; j++) {
+				if (i === 0 || i === sizeX - 1 || j === 0 || j === sizeZ - 1) {
+					let height2: number = 3;
+					matrix[i].push(height2);
+					continue;
+				}
+
+				const height3 =
+					Math.cos((i / sizeX) * Math.PI * 2) * Math.cos((j / sizeZ) * Math.PI * 2) + 2;
+				matrix[i].push(height3 * 4);
+			}
+		}
+
+		// Create the heightfield
+		const heightfieldShape = new CANNON.Heightfield(matrix, {
+			elementSize: 5
+		});
+		const heightfieldBody = new CANNON.Body({
+			mass: 0,
+			collisionFilterGroup: 2,
+			collisionFilterMask: 1
+		});
+		heightfieldBody.addShape(heightfieldShape);
+		heightfieldBody.position.set(-5, -2, ((sizeZ - 1) * heightfieldShape.elementSize) / 2);
+		heightfieldBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+		world.addBody(heightfieldBody);
+
+		//
 	}
 
 	/**
@@ -186,7 +230,6 @@ document.getElementById( 'container' ).innerHTML = "";
 				scene
 			);
 		}
-		console.log(vehicle);
 
 		carList.push(vehicle);
 		vehicle.addToWorld(world);
@@ -200,6 +243,7 @@ document.getElementById( 'container' ).innerHTML = "";
 		world.step(1 / 60);
 
 		// update the chassis position
+
 		carList.forEach((car) => {
 			const posBody = car.chassisBody.position;
 			const quatBody = car.chassisBody.quaternion;
@@ -221,14 +265,15 @@ document.getElementById( 'container' ).innerHTML = "";
 		renderer.render(scene, camera);
 	}
 
-	var population: number = 5;
+	var population: number = 20;
 
 	onMount(() => {
 		initGraphics();
 		initPhysics();
+		initTrack();
 
 		for (var i = 0; i < population; i++) {
-			//createExtendedCar();
+			createExtendedCar();
 		}
 		render();
 	});
@@ -247,7 +292,7 @@ document.getElementById( 'container' ).innerHTML = "";
 			var chassisShape = new CANNON.Box(new CANNON.Vec3(lengthX, lengthY, lengthZ));
 			var chassisBody = new CANNON.Body({
 				mass: 10,
-				position: new CANNON.Vec3(0, 3, 0),
+				position: new CANNON.Vec3(0, 5, 0),
 				collisionFilterGroup: GROUP1,
 				collisionFilterMask: GROUP2
 			});
