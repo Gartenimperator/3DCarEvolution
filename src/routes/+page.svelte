@@ -227,18 +227,6 @@ document.getElementById( 'container' ).innerHTML = "";
 		initGraphics();
 		initPhysics();
 
-		const data: any[] = [];
-		for (let i = 0; i < 1000; i++) {
-			const y = 0.5 * Math.cos(0.2 * i);
-			data.push(y);
-		}
-
-		const heightFieldShape = new CANNON.Heightfield(data, {
-			elementSize: 1
-		});
-		const heightfieldBody = new CANNON.Body({ shape: heightFieldShape });
-		world.addBody(heightfieldBody);
-
 		for (var i = 0; i < population; i++) {
 			//createExtendedCar();
 		}
