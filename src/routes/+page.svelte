@@ -180,9 +180,9 @@ document.getElementById( 'container' ).innerHTML = "";
 			vehicle.addWheelWithMesh(
 				radius,
 				width,
-				-5 + Math.random() * 11,
+				-4 + Math.random() * 9,
 				0,
-				-5 + Math.random() * 11,
+				-2 + Math.random() * 5,
 				scene
 			);
 		}
@@ -226,8 +226,21 @@ document.getElementById( 'container' ).innerHTML = "";
 	onMount(() => {
 		initGraphics();
 		initPhysics();
+
+		const data: any[] = [];
+		for (let i = 0; i < 1000; i++) {
+			const y = 0.5 * Math.cos(0.2 * i);
+			data.push(y);
+		}
+
+		const heightFieldShape = new CANNON.Heightfield(data, {
+			elementSize: 1
+		});
+		const heightfieldBody = new CANNON.Body({ shape: heightFieldShape });
+		world.addBody(heightfieldBody);
+
 		for (var i = 0; i < population; i++) {
-			createExtendedCar();
+			//createExtendedCar();
 		}
 		render();
 	});
@@ -280,9 +293,9 @@ document.getElementById( 'container' ).innerHTML = "";
 				collisionFilterMask: GROUP2
 			});
 
-			const rotateToXAxis = new CANNON.Quaternion().setFromEuler(Math.PI / 2, 0, 0);
+			const rotateParallelToXAxis = new CANNON.Quaternion().setFromEuler(Math.PI / 2, 0, 0);
 			const shape = new CANNON.Cylinder(radius, radius, width, 25);
-			wheelBody.addShape(shape, new CANNON.Vec3(), rotateToXAxis);
+			wheelBody.addShape(shape, new CANNON.Vec3(), rotateParallelToXAxis);
 			wheelBody.angularDamping = 0.4;
 
 			this.addWheel({
@@ -291,7 +304,7 @@ document.getElementById( 'container' ).innerHTML = "";
 				axis: new CANNON.Vec3(0, 0, -1)
 			});
 
-			this.setWheelForce(50, this.wheelBodies.length - 1);
+			this.setWheelForce(100, this.wheelBodies.length - 1);
 
 			// wheel visual body
 			this.addWheelMesh(radius, width, scene);
