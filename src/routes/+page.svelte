@@ -11,6 +11,7 @@
 	import Stats from 'three/examples/jsm/libs/stats.module';
 	import { Material, RigidVehicle, Vec3, World } from 'cannon-es';
 	import { onMount } from 'svelte';
+	import { arraySlice } from 'three/src/animation/AnimationUtils';
 
 	// Detects webgl
 	/*
@@ -29,7 +30,7 @@ document.getElementById( 'container' ).innerHTML = "";
 	var XPointer: any;
 
 	// Physics variables
-	var worlds: any[] = [];
+	var worlds: ExtendedWorld[] = [];
 	var groundBodyContactMaterialOptions = {
 		friction: 0.9,
 		restitution: 0.1,
@@ -49,24 +50,10 @@ document.getElementById( 'container' ).innerHTML = "";
 	};
 	var gravity = -9.82;
 
-	//Track matrix
-	// Create a matrix of height values
-	const matrix: number[][] = [];
-	const sizeX = 20;
-	const sizeZ = 20;
-	for (let i = 0; i < sizeX; i++) {
-		matrix.push([]);
-		for (let j = 0; j < sizeZ; j++) {
-			if (i === 0 || i === sizeX - 1 || j === 0 || j === sizeZ - 1) {
-				let height2: number = 3;
-				matrix[i].push(height2);
-				continue;
-			}
+	//Track gradient array
 
-			const height3 = Math.cos((i / sizeX) * Math.PI * 2) * Math.cos((j / sizeZ) * Math.PI * 2) + 2;
-			matrix[i].push(height3 * 4);
-		}
-	}
+	var trackGradients: number[] = [0,0,10,20,-90,0,90,-10,0,0,10,20,-90,0,70,-20];
+	var trackPieceLengthX: number = 5;
 
 	//Collision Groups
 	var GROUP1 = 1;
@@ -111,7 +98,7 @@ document.getElementById( 'container' ).innerHTML = "";
 			container.appendChild(stats.domElement);
 		}
 
-		var geometryX = new THREE.PlaneGeometry(10, 1, 1);
+		var geometryX = new THREE.PlaneGeometry(40, 1, 1);
 		var geometryZ = new THREE.PlaneGeometry(10, 1, 1);
 		var geometryY = new THREE.PlaneGeometry(10, 1, 1);
 		var materialX = new THREE.MeshBasicMaterial({
@@ -150,34 +137,20 @@ document.getElementById( 'container' ).innerHTML = "";
 	 * Pyhsics
 	 */
 
-	function initPhysics() {
-		for (var i = 0; i < population / carsPerWorld; i++) {
+	function initWorlds() {
+		for (var i = 0; i < amountOfWorlds; i++) {
 			var world = new ExtendedWorld(
 				scene,
 				worldOptions,
 				gravity,
 				groundBodyContactMaterialOptions,
-				groundWheelContactMaterialOptions
+				groundWheelContactMaterialOptions,
+				population
 			);
-			//world.initTrack(matrix);
-
-			//add Cars
-			for (var j = 0; j < carsPerWorld; j++) {
-				world.addCar(5, 1, 2);
-			}
+			//world.initTrackWithHeightfield(matrix);
+			world.initTrackWithGradients(trackGradients, trackPieceLengthX);
 
 			worlds.push(world);
-
-			var chassisShape = new CANNON.Box(new CANNON.Vec3(10, 0.1, 50));
-			var box = new CANNON.Body({
-				mass: 0,
-				position: new CANNON.Vec3(40, 2, 0),
-				collisionFilterGroup: GROUP3,
-				collisionFilterMask: GROUP1
-			});
-			const rotateParallelToZAxis = new CANNON.Quaternion().setFromEuler(0, 0, 0.4);
-			box.addShape(chassisShape, new CANNON.Vec3(), rotateParallelToZAxis);
-			world.addBody(box);
 		}
 		console.log(worlds);
 	}
@@ -193,25 +166,23 @@ document.getElementById( 'container' ).innerHTML = "";
 		// update the chassis position
 		worlds.forEach((world) => {
 			world.updatePhysicsWithScene(frameTime);
+			world.cannonDebugRenderer.update();
 		});
 	}
 
 	function render() {
 		requestAnimationFrame(render);
 		updatePhysics();
-		worlds.forEach((world) => {
-			world.cannonDebugRenderer.update();
-		});
 		renderer.render(scene, camera);
 		stats.update();
 	}
 
 	var population: number = 30;
-	var carsPerWorld: number = 30;
+	var amountOfWorlds: number = 1;
 
 	onMount(() => {
 		initGraphics();
-		initPhysics();
+		initWorlds();
 
 		render();
 	});
@@ -219,6 +190,8 @@ document.getElementById( 'container' ).innerHTML = "";
 	class ExtendedRigidVehicle extends RigidVehicle {
 		wheelMeshes: Mesh[] = [];
 		carVisualBody: Mesh;
+		furthestPosition: CANNON.Vec3 = new CANNON.Vec3(0,0,0);
+		timeOut: number = 0;
 
 		constructor(lengthX: number, lengthY: number, lengthZ: number, bodyMaterial: CANNON.Material) {
 			super();
@@ -273,10 +246,12 @@ document.getElementById( 'container' ).innerHTML = "";
 				collisionFilterMask: GROUP2 | GROUP3
 			});
 
+			new THREE.Euler()
+
 			const rotateParallelToXAxis = new CANNON.Quaternion().setFromEuler(Math.PI / 2, 0, 0);
 			const shape = new CANNON.Cylinder(radius, radius, width, 25);
 			wheelBody.addShape(shape, new CANNON.Vec3(), rotateParallelToXAxis);
-			wheelBody.angularDamping = 0.4;
+			wheelBody.angularDamping = 0.6;
 
 			this.addWheel({
 				body: wheelBody,
@@ -284,7 +259,7 @@ document.getElementById( 'container' ).innerHTML = "";
 				axis: new CANNON.Vec3(0, 0, -1)
 			});
 
-			this.setWheelForce(100, this.wheelBodies.length - 1);
+			this.setWheelForce(150, this.wheelBodies.length - 1);
 
 			// wheel visual body
 			this.addWheelMesh(radius, width, scene);
@@ -311,7 +286,7 @@ document.getElementById( 'container' ).innerHTML = "";
 
 	class ExtendedWorld extends World {
 		scene: any;
-		cars: ExtendedRigidVehicle[] = [];
+		populationManager: PopulationManager;
 		cannonDebugRenderer: any;
 		groundMaterial: CANNON.Material = new CANNON.Material('groundMaterial');
 		wheelMaterial: CANNON.Material = new CANNON.Material('wheelMaterial');
@@ -322,15 +297,27 @@ document.getElementById( 'container' ).innerHTML = "";
 			options: any,
 			gravity: number,
 			groundBodyContactMaterialOptions: any,
-			groundWheelContactMaterialOptions: any
+			groundWheelContactMaterialOptions: any,
+			populationSize: number
 		) {
 			super(options);
+			this.populationManager = new PopulationManager();
 			this.scene = scene;
 			this.gravity.set(0, gravity, 0);
 			this.initPhysics(groundBodyContactMaterialOptions, groundWheelContactMaterialOptions);
 
+			this.initNewPopulation(populationSize);
+
 			//Uncomment for debug information
 			this.cannonDebugRenderer = CannonDebugger(this.scene, this);
+		}
+
+		//add Cars
+		initNewPopulation(populationSize: number) {
+			for (var j = 0; j < populationSize; j++) {
+				this.populationManager.getRandomCar();
+				this.addCar(5, 1, 2);
+			}
 		}
 
 		addCar(lengthX: number, lengthY: number, lengthZ: number) {
@@ -352,7 +339,7 @@ document.getElementById( 'container' ).innerHTML = "";
 				);
 			}
 
-			this.cars.push(vehicle);
+			this.populationManager.cars.push(vehicle);
 			vehicle.addToWorld(this);
 		}
 
@@ -361,9 +348,19 @@ document.getElementById( 'container' ).innerHTML = "";
 			this.step(frameTime);
 
 			//update position of cars inside the scene
-			this.cars.forEach((car) => {
+			this.populationManager.cars.forEach((car) => {
 				const posBody = car.chassisBody.position;
 				const quatBody = car.chassisBody.quaternion;
+				if (posBody.x <= car.furthestPosition.x) {
+					car.timeOut = car.timeOut + 1;
+					if (car.timeOut > 600) { //~10 seconds at 60 frames
+						this.populationManager.disableCar(car);
+						car.removeFromWorld(this);
+					}
+				} else {
+					car.furthestPosition.set(posBody.x, posBody.y, posBody.z);
+					car.timeOut = 0;
+				}
 				car.carVisualBody.position.set(posBody.x, posBody.y, posBody.z);
 				car.carVisualBody.quaternion.set(quatBody.x, quatBody.y, quatBody.z, quatBody.w);
 				for (var i = 0; i < car.wheelBodies.length; i++) {
@@ -411,7 +408,7 @@ document.getElementById( 'container' ).innerHTML = "";
 			this.addBody(planeBody);
 		}
 
-		initTrack(matrix: number[][]) {
+		initTrackWithHeightfield(matrix: number[][]) {
 			// Create the heightfield
 			const heightfieldShape = new CANNON.Heightfield(matrix, {
 				elementSize: 10
@@ -430,6 +427,80 @@ document.getElementById( 'container' ).innerHTML = "";
 			heightfieldBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
 			this.addBody(heightfieldBody);
 		}
+
+		initTrackWithGradients(gradients: number[], length: number) {
+			var rotateParallelToZAxis: CANNON.Quaternion = new CANNON.Quaternion();
+			var chassisShape = new CANNON.Box(new CANNON.Vec3(length, 0.1, 50));
+
+			//always start with a level track piece
+			gradients.unshift(0);
+
+			//starting position
+			var currentPosition: CANNON.Vec3 = new CANNON.Vec3(0, 0, 0);
+
+			//Construct the track by placing the track pieces at the correct positions according to the gradients
+			gradients.forEach(gradient => {
+				//Calculate new Position via sum of interior angles, law of sin and law of cos
+				var beta: number = 90 - gradient;
+
+				//Law of Sin - calculate the distance (y-distance) to the middle of the to be placed track piece
+				var yDist = (Math.sin(gradient* Math.PI / 180) * length) / Math.sin(90 * Math.PI / 180);
+
+				//Law of Cos - calculate the distance (x-distance) to the middle of the to be placed track piece
+				var xDist = Math.sqrt(yDist * yDist - 2 * length * yDist * Math.cos(beta* Math.PI / 180) + length * length);
+
+				//Point to the placement (middle) of the neto be placed track piece
+				currentPosition.x = currentPosition.x + xDist;
+				currentPosition.y = currentPosition.y + yDist;
+
+				var box = new CANNON.Body({
+				mass: 0,
+				position: currentPosition,
+				collisionFilterGroup: GROUP3,
+				collisionFilterMask: GROUP1
+			});
+			
+			//Point to the end of the current track piece
+			currentPosition.x = currentPosition.x + xDist;
+			currentPosition.y = currentPosition.y + yDist;
+
+			//rotate the actual track piece according to the gradient
+			rotateParallelToZAxis = new CANNON.Quaternion().setFromEuler(0, 0, (gradient * 2   * Math.PI) / 360);
+			box.addShape(chassisShape, new CANNON.Vec3(), rotateParallelToZAxis);
+			this.addBody(box);
+			})
+		}
+	}
+
+	class PopulationManager {
+
+		cars: ExtendedRigidVehicle[] = [];
+
+		constructor() {	
+
+		}
+
+		disableCar(car: ExtendedRigidVehicle) {
+			//var car2 = this.cars.slice(1,1);
+		}
+
+
+		mutate() {
+
+		}
+
+		crossOver () {
+
+		}
+
+		getRandomCar(): number[] {
+
+			//GenerateRandomCar Here
+			//Extra class?
+
+			return [];
+		}
+
 	}
 </script>
 
