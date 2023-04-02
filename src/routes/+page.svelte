@@ -30,7 +30,9 @@ document.getElementById( 'container' ).innerHTML = "";
 	var XPointer: any;
 
 	// Physics variables
-	var worlds: ExtendedWorld[] = [];
+	
+	var activeWorlds: Map<number, ExtendedWorld> = new Map();
+	var inactiveWorlds: Map<number, ExtendedWorld> = new Map();
 	var groundBodyContactMaterialOptions = {
 		friction: 0.9,
 		restitution: 0.1,
@@ -54,6 +56,13 @@ document.getElementById( 'container' ).innerHTML = "";
 
 	var trackGradients: number[] = [0,0,10,20,-90,0,90,-10,0,0,10,20,-90,0,70,-20];
 	var trackPieceLengthX: number = 5;
+
+	//Generic-Algorithm golab variables
+
+	var generationCounter: number = 1;
+	var carIdCounter: number = 1;
+
+	var timeOut: number = 420;
 
 	//Collision Groups
 	var GROUP1 = 1;
@@ -99,29 +108,13 @@ document.getElementById( 'container' ).innerHTML = "";
 		}
 
 		var geometryX = new THREE.PlaneGeometry(40, 1, 1);
-		var geometryZ = new THREE.PlaneGeometry(10, 1, 1);
-		var geometryY = new THREE.PlaneGeometry(10, 1, 1);
 		var materialX = new THREE.MeshBasicMaterial({
 			color: 0xff0000,
 			side: THREE.DoubleSide
 		});
-		var materialY = new THREE.MeshBasicMaterial({
-			color: 0xffffff,
-			side: THREE.DoubleSide
-		});
-		var materialZ = new THREE.MeshBasicMaterial({
-			color: 0x123456,
-			side: THREE.DoubleSide
-		});
 		XPointer = new THREE.Mesh(geometryX, materialX);
-		var YPointer = new THREE.Mesh(geometryY, materialY);
-		var ZPointer = new THREE.Mesh(geometryZ, materialZ);
 		XPointer.rotation.x = Math.PI / 2;
-		ZPointer.rotation.z = Math.PI / 2;
-		YPointer.rotation.y = Math.PI / 2;
 		scene.add(XPointer);
-		scene.add(YPointer);
-		scene.add(ZPointer);
 
 		window.addEventListener('resize', onWindowResize, false);
 	}
@@ -145,14 +138,15 @@ document.getElementById( 'container' ).innerHTML = "";
 				gravity,
 				groundBodyContactMaterialOptions,
 				groundWheelContactMaterialOptions,
-				population
+				population,
+				i
 			);
 			//world.initTrackWithHeightfield(matrix);
 			world.initTrackWithGradients(trackGradients, trackPieceLengthX);
 
-			worlds.push(world);
+			activeWorlds.set(world.id, world);
 		}
-		console.log(worlds);
+		console.log(activeWorlds);
 	}
 
 	/**
@@ -164,21 +158,38 @@ document.getElementById( 'container' ).innerHTML = "";
 
 	function updatePhysics() {
 		// update the chassis position
-		worlds.forEach((world) => {
-			world.updatePhysicsWithScene(frameTime);
-			world.cannonDebugRenderer.update();
+		activeWorlds.forEach((world) => {
+			//only update worlds with active cars
+			if (world.populationManager.populationSize > 0) {
+				world.updatePhysicsWithScene(frameTime);
+				world.cannonDebugRenderer.update();
+			} else {
+				console.log("Disabling world with id: " + world.id);
+				activeWorlds.delete(world.id);
+				inactiveWorlds.set(world.id, world);
+			}
 		});
 	}
 
+	var finished: boolean = false;
+
 	function render() {
 		requestAnimationFrame(render);
-		updatePhysics();
+
+		if (activeWorlds.size > 0) {
+			updatePhysics();
+		} else {
+			//next steps in the generation
+			//let render() run, allows the user to move around the map
+		}
+
 		renderer.render(scene, camera);
 		stats.update();
+		
 	}
 
-	var population: number = 30;
-	var amountOfWorlds: number = 1;
+	var population: number = 5;
+	var amountOfWorlds: number = 10;
 
 	onMount(() => {
 		initGraphics();
@@ -187,14 +198,27 @@ document.getElementById( 'container' ).innerHTML = "";
 		render();
 	});
 
+	
+	let counter = 0; // In closure of WithAutoIncrementedIndex class
+
+	class WithAutoIncrementedIndex {
+    	index: number;
+
+    	constructor() {
+        	this.index = counter++;
+    	}
+	}
+
 	class ExtendedRigidVehicle extends RigidVehicle {
 		wheelMeshes: Mesh[] = [];
 		carVisualBody: Mesh;
 		furthestPosition: CANNON.Vec3 = new CANNON.Vec3(0,0,0);
 		timeOut: number = 0;
+		id: number;
 
-		constructor(lengthX: number, lengthY: number, lengthZ: number, bodyMaterial: CANNON.Material) {
+		constructor(lengthX: number, lengthY: number, lengthZ: number, bodyMaterial: CANNON.Material, id: number) {
 			super();
+			this.id = id;
 			this.carVisualBody = this.addCarBodyMesh(lengthX, lengthY, lengthZ, bodyMaterial);
 		}
 
@@ -291,6 +315,8 @@ document.getElementById( 'container' ).innerHTML = "";
 		groundMaterial: CANNON.Material = new CANNON.Material('groundMaterial');
 		wheelMaterial: CANNON.Material = new CANNON.Material('wheelMaterial');
 		bodyMaterial: CANNON.Material = new CANNON.Material('bodyMaterial');
+		carIdCounter: number = 0;
+		id: number;
 
 		constructor(
 			scene: any,
@@ -298,9 +324,11 @@ document.getElementById( 'container' ).innerHTML = "";
 			gravity: number,
 			groundBodyContactMaterialOptions: any,
 			groundWheelContactMaterialOptions: any,
-			populationSize: number
+			populationSize: number,
+			id: number
 		) {
 			super(options);
+			this.id = id;
 			this.populationManager = new PopulationManager();
 			this.scene = scene;
 			this.gravity.set(0, gravity, 0);
@@ -315,13 +343,13 @@ document.getElementById( 'container' ).innerHTML = "";
 		//add Cars
 		initNewPopulation(populationSize: number) {
 			for (var j = 0; j < populationSize; j++) {
-				this.populationManager.getRandomCar();
+				//this.populationManager.getRandomCar();
 				this.addCar(5, 1, 2);
 			}
 		}
 
 		addCar(lengthX: number, lengthY: number, lengthZ: number) {
-			let vehicle = new ExtendedRigidVehicle(lengthX, lengthY, lengthZ, this.bodyMaterial);
+			let vehicle = new ExtendedRigidVehicle(lengthX, lengthY, lengthZ, this.bodyMaterial, this.carIdCounter++);
 
 			const axisWidth = 4;
 			const radius = 2;
@@ -339,7 +367,7 @@ document.getElementById( 'container' ).innerHTML = "";
 				);
 			}
 
-			this.populationManager.cars.push(vehicle);
+			this.populationManager.addCar(vehicle);
 			vehicle.addToWorld(this);
 		}
 
@@ -348,19 +376,28 @@ document.getElementById( 'container' ).innerHTML = "";
 			this.step(frameTime);
 
 			//update position of cars inside the scene
-			this.populationManager.cars.forEach((car) => {
+			this.populationManager.activeCars.forEach((car) => {
 				const posBody = car.chassisBody.position;
 				const quatBody = car.chassisBody.quaternion;
-				if (posBody.x <= car.furthestPosition.x) {
+
+				//A car needs to move 1 meter during the timeOut duration to not get timed-out.
+				if (posBody.x <= car.furthestPosition.x + 1) {
 					car.timeOut = car.timeOut + 1;
-					if (car.timeOut > 600) { //~10 seconds at 60 frames
-						this.populationManager.disableCar(car);
-						car.removeFromWorld(this);
+					//Remove a car if it hasn't moved forward during the timeOut duration.
+					if (car.timeOut > timeOut) { 
+						this.removeVehicle(car);
 					}
 				} else {
 					car.furthestPosition.set(posBody.x, posBody.y, posBody.z);
 					car.timeOut = 0;
 				}
+				
+				//Also remove a car if it has fallen off the track.
+				if (posBody.y <= -10) {
+					this.removeVehicle(car);
+				}
+				
+				//Update the visual representation of the car
 				car.carVisualBody.position.set(posBody.x, posBody.y, posBody.z);
 				car.carVisualBody.quaternion.set(quatBody.x, quatBody.y, quatBody.z, quatBody.w);
 				for (var i = 0; i < car.wheelBodies.length; i++) {
@@ -375,6 +412,13 @@ document.getElementById( 'container' ).innerHTML = "";
 		updatePhysicsWithoutScene(frameTime: number) {
 			//world.step(frameTime, delta, 1);
 			this.step(frameTime);
+		}
+
+		removeVehicle(vehicle: ExtendedRigidVehicle) {
+			if (this.populationManager.disableCar(vehicle)) {
+				vehicle.removeFromWorld(this);
+				console.log('Disabling vehicle ' + vehicle.id + ' from world ' + this.id);
+			}
 		}
 
 		initPhysics(bodyGroundOptiones: any, wheelGroundOptions: any) {
@@ -394,18 +438,6 @@ document.getElementById( 'container' ).innerHTML = "";
 
 			this.addContactMaterial(wheelGroundContactMaterial);
 			this.addContactMaterial(bodyGroundContactMaterial);
-
-			var q = XPointer.quaternion;
-			var planeBody = new CANNON.Body({
-				mass: 0, // mass = 0 makes the body static
-				material: this.groundMaterial,
-				shape: new CANNON.Plane(),
-				quaternion: new CANNON.Quaternion(-q._x, q._y, q._z, q._w),
-				collisionFilterGroup: GROUP2,
-				collisionFilterMask: GROUP1
-			});
-
-			this.addBody(planeBody);
 		}
 
 		initTrackWithHeightfield(matrix: number[][]) {
@@ -432,11 +464,19 @@ document.getElementById( 'container' ).innerHTML = "";
 			var rotateParallelToZAxis: CANNON.Quaternion = new CANNON.Quaternion();
 			var chassisShape = new CANNON.Box(new CANNON.Vec3(length, 0.1, 50));
 
-			//always start with a level track piece
-			gradients.unshift(0);
+			//The Track always starts on a 10m * 50m plane to allow the cars to spawn correctly
+			var planeBody = new CANNON.Body({
+				mass: 0, // mass = 0 makes the body static
+				material: this.groundMaterial,
+				shape: new CANNON.Box(new CANNON.Vec3(5, 0.1, 50)),
+				collisionFilterGroup: GROUP2,
+				collisionFilterMask: GROUP1
+			});
 
-			//starting position
-			var currentPosition: CANNON.Vec3 = new CANNON.Vec3(0, 0, 0);
+			this.addBody(planeBody);
+
+			//the always track starts 5 Meters in front of the cars
+			var currentPosition: CANNON.Vec3 = new CANNON.Vec3(5, 0, 0);
 
 			//Construct the track by placing the track pieces at the correct positions according to the gradients
 			gradients.forEach(gradient => {
@@ -474,14 +514,28 @@ document.getElementById( 'container' ).innerHTML = "";
 
 	class PopulationManager {
 
-		cars: ExtendedRigidVehicle[] = [];
+		activeCars: Map<number, ExtendedRigidVehicle> = new Map();
+		disabledCars: Map<number, ExtendedRigidVehicle> = new Map();
+		populationSize: number = 0;
 
 		constructor() {	
 
 		}
 
-		disableCar(car: ExtendedRigidVehicle) {
-			//var car2 = this.cars.slice(1,1);
+		addCar(vehicle: ExtendedRigidVehicle) {
+			this.activeCars.set(vehicle.id, vehicle);
+			this.populationSize++;
+		}
+
+		disableCar(car: ExtendedRigidVehicle): boolean {
+			if (this.activeCars.delete(car.id)) {
+				this.disabledCars.set(car.id, car);
+			} else {
+				console.log('Tried to remove a car which isn\'t part of the population');
+				return false;
+			}
+			this.populationSize--;
+			return true;
 		}
 
 
@@ -508,6 +562,33 @@ document.getElementById( 'container' ).innerHTML = "";
 	<div id="container" />
 	<div id="speedometer" />
 </div>
+
+
+<span>GravityInput</span>
+<br>
+<span>TimeOutTimer</span>
+<br>
+<span>TrackInput</span>
+<br>
+<span>TrackPieceLength</span>
+<br>
+<span>Multiple tracks(?) (Insel-Model)</span>
+<br>
+<span>CarInput</span>
+<br>
+<span>CarShowcase(?)</span>
+<br>
+<span>RestartButton</span>
+<br>
+<span>FastForward(?)</span>
+<br>
+<span>Stop FastForward(?)</span>
+<br>
+<span>StatsDisplay - Graphs of Generations</span>
+<br>
+<span>Toggle camera control (individual vs following)</span>
+<br>
+<span>Stop Generation manually (Stuck car not disabling or other problems)</span>
 
 <style>
 	* {
