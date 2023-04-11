@@ -8,6 +8,7 @@
 	import * as THREE from 'three';
 	import CannonDebugger from 'cannon-es-debugger';
 	import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+	import { FlyControls } from 'three/examples/jsm/controls/FlyControls.js';
 	import Stats from 'three/examples/jsm/libs/stats.module';
 	import { Material, RigidVehicle, Vec3, World } from 'cannon-es';
 	import { onMount } from 'svelte';
@@ -25,7 +26,8 @@ document.getElementById( 'container' ).innerHTML = "";
 
 	// Graphics variables
 	var container: HTMLElement | null;
-	var camera: any, controls, scene: any, renderer: any;
+	var camera: any, scene: any, renderer: any;
+	var controls: FlyControls;
 	var materialDynamic, materialStatic, materialInteractive: any;
 	var XPointer: any;
 
@@ -55,25 +57,24 @@ document.getElementById( 'container' ).innerHTML = "";
 	const fastForwardFrameTime: number = 1 / 20;
 	const delta: number = 1; //???
 
-	//Track gradient array
-
+	//Track gradient arrays
 	var steps: number[] = [
 		-90, -90, -90, 0, 0, -90, -90, -90, -90, 0, 0, -90, -90, -90, -90, 0, 0, -90, -90, -90, -90, 0,
 		0, -90, -90, -90, -90, 0, 0, -90, -90, -90, -90, 0, 0, -90, -90, -90, -90, 0, 0, -90, -90, -90,
 		-90, 0, 0, -90
 	];
 	var notWorking: number[] = [170, -170, -120];
+	var jump: number[] = [0, -10, 0, 10, 20, -90, -90, -90, 0, 70, 80, 90, -10, 0, 0, 90];
+	var simpleTrack: number[] = [
+		0, 15, 34, 40, 40, 20, 10, -30, -30, -30, -20, -10, 0, 10, 20, -90, 0, 80, -10, -10, -20, 0, 30,
+		20, 10, 0
+	];
 
-	var trackGradients: number[] = steps;
+	var trackGradients: number[] = jump;
 	var trackPieceLengthX: number = 5;
 
 	//Generic-Algorithm global variables
-
-	var generationCounter: number = 1;
-	var carIdCounter: number = 1;
-	var finished: boolean = false;
-
-	var population: number = 50;
+	var population: number = 2;
 	var amountOfWorlds: number = 1;
 
 	var timeOut: number = 420;
@@ -88,9 +89,9 @@ document.getElementById( 'container' ).innerHTML = "";
 
 		scene = new THREE.Scene();
 
-		camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.2, 2000);
-		camera.position.x = -15;
-		camera.position.y = 10;
+		camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 500);
+		camera.position.x = -20;
+		camera.position.y = 20;
 		camera.position.z = 0;
 		camera.lookAt(new THREE.Vector3(0, 3, 0));
 
@@ -112,7 +113,13 @@ document.getElementById( 'container' ).innerHTML = "";
 
 		if (container !== null) {
 			container.innerHTML = '';
-			controls = new OrbitControls(camera, container);
+			//controls = new OrbitControls(camera, container);
+			controls = new FlyControls(camera, container);
+			controls.dragToLook = true;
+			controls.movementSpeed = 30;
+			controls.rollSpeed = 1 / 2;
+			controls.autoForward = false;
+
 			container.appendChild(renderer.domElement);
 
 			stats = Stats();
@@ -199,6 +206,7 @@ document.getElementById( 'container' ).innerHTML = "";
 			//let render() run, allows the user to move around the map
 		}
 
+		//controls.update(frameTime);
 		renderer.render(scene, camera);
 		stats.update();
 	}
@@ -247,7 +255,7 @@ document.getElementById( 'container' ).innerHTML = "";
 			var chassisShape = new CANNON.Box(new CANNON.Vec3(lengthX, lengthY, lengthZ));
 			var chassisBody = new CANNON.Body({
 				mass: 10,
-				position: new CANNON.Vec3(0, 5, 0),
+				position: new CANNON.Vec3(0, 10, 0),
 				material: bodyMaterial,
 				collisionFilterGroup: GROUP1,
 				collisionFilterMask: GROUP2 | GROUP3
@@ -292,6 +300,8 @@ document.getElementById( 'container' ).innerHTML = "";
 			const shape = new CANNON.Cylinder(radius, radius, width, 25);
 			wheelBody.addShape(shape, new CANNON.Vec3(), rotateParallelToXAxis);
 			wheelBody.angularDamping = 0.6;
+
+			console.log(new CANNON.Vec3(positionX, positionY, positionZ));
 
 			this.addWheel({
 				body: wheelBody,
@@ -358,6 +368,7 @@ document.getElementById( 'container' ).innerHTML = "";
 			this.populationManager = new PopulationManager();
 			this.scene = scene;
 			this.gravity.set(0, gravity, 0);
+
 			this.initCarGroundContact(
 				groundBodyContactMaterialOptions,
 				groundWheelContactMaterialOptions
@@ -372,13 +383,17 @@ document.getElementById( 'container' ).innerHTML = "";
 		//Add new Cars according to the given populationSize.
 		initNewPopulation(populationSize: number) {
 			for (var j = 0; j < populationSize; j++) {
-				//this.populationManager.getRandomCar();
-				this.addCar(5, 1, 2);
+				this.addCar(this.populationManager.getRandomCar());
 			}
 		}
 
 		//Add a single car according to its passed genome.
-		addCar(lengthX: number, lengthY: number, lengthZ: number) {
+		addCar(vehicleAsArray: number[]) {
+			var baseMass = vehicleAsArray[0]; //not used yet
+			var lengthX = vehicleAsArray[1];
+			var lengthY = vehicleAsArray[2];
+			var lengthZ = vehicleAsArray[3];
+
 			let vehicle = new ExtendedRigidVehicle(
 				lengthX,
 				lengthY,
@@ -387,18 +402,18 @@ document.getElementById( 'container' ).innerHTML = "";
 				this.carIdCounter++
 			);
 
-			const axisWidth = 4;
-			const radius = 2;
-			const width = 0.5;
-
 			//Add wheels to the car.
-			for (var i = 0; i < 4; i++) {
+			for (var i = 0; i < (vehicleAsArray.length - 4) / 5; i++) {
+				const radius = 1;
+				const width = 1;
+				console.log(vehicleAsArray[8 + 5 * i]); //length - x
+
 				vehicle.addWheelWithMesh(
 					radius,
 					width,
-					-4 + Math.random() * 9,
-					0,
-					-2 + Math.random() * 5,
+					vehicleAsArray[6 + 5 * i], //length - x
+					vehicleAsArray[7 + 5 * i], //height - y
+					vehicleAsArray[8 + 5 * i], //width - z
 					this.scene,
 					this.wheelMaterial
 				);
@@ -612,10 +627,39 @@ document.getElementById( 'container' ).innerHTML = "";
 
 		crossOver() {}
 
+		/**
+		 * Generates a new random vehicle. This vehicle hax a maximum length of 5 and a maximum width/height of 2 meters.
+		 * The amout, placement and size of wheels is also randomly generated. The wheel radius and width have a maximum size of 1 meter.
+		 * The wheel position is generated according to the size of the vehicle body, so that the wheels center has to always touch the body.
+		 */
 		getRandomCar(): number[] {
 			//GenerateRandomCar Here
+			var car: number[] = [];
 
-			return [];
+			car.push(this.roundToFour(Math.random() * 50)); //base weigth - influences the cars calculated weight and its engine power
+			car.push(this.roundToFour(Math.random() * 5)); //length
+			car.push(this.roundToFour(Math.random() * 2)); //width
+			car.push(this.roundToFour(Math.random() * 2)); //height
+
+			var wheelAmount = this.roundToFour(Math.random() * 5);
+
+			for (var i = 0; i < 1; i++) {
+				car.push(this.roundToFour(Math.random())); //wheel radius
+				car.push(this.roundToFour(Math.random())); //wheel width
+
+				//Try to generate wheels which are touching the car
+				car.push(this.roundToFour(car[1] * Math.random())); //wheel position lengthwise
+				car.push(this.roundToFour(car[2] * Math.random())); //wheel position widthwise
+				car.push(this.roundToFour(car[3] * Math.random())); //wheel position heightwise
+				//car.push(this.roundToFour(Math.random())); //wheel density - not yet used
+			}
+			console.log(car);
+			return car;
+		}
+
+		// custom round function
+		roundToFour(num: number) {
+			return +(Math.round(num * 10000) / 10000);
 		}
 	}
 </script>
