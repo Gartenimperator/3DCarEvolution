@@ -34,10 +34,9 @@ var groundBodyContactMaterialOptions = {
     frictionEquationStiffness: 1e8
 };
 var groundWheelContactMaterialOptions = {
-    friction: 0.9,
-    restitution: 0.1,
-    contactEquationRelaxation: 3,
-    frictionEquationStiffness: 1e8
+    friction: 0.3,
+    restitution: 0,
+    frictionEquationStiffness: 1000
 };
 var worldOptions = {
     allowSleep: true,

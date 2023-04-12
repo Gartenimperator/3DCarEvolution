@@ -16,7 +16,11 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     bodyMass: number = 0;
     vehicleMass: number = 0;
     id: number;
-    materialInteractive = new THREE.MeshPhongMaterial({ color: 0x990000 });
+    wheelMaterial = new THREE.MeshPhongMaterial({ color: 0x2A292B });
+    bodyMaterial = new THREE.MeshPhongMaterial({
+        color: 0xDD6E0F,
+        side: THREE.DoubleSide
+    });
 
     constructor(
         lengthX: number,
@@ -58,11 +62,8 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         //Add visual Body
         var geometry = new THREE.BoxGeometry(lengthX * 2, lengthY * 2, lengthZ * 2); // double chasis shape
-        var material = new THREE.MeshBasicMaterial({
-            color: 0xffff00,
-            side: THREE.DoubleSide
-        });
-        this.carVisualBody = new THREE.Mesh(geometry, material);
+
+        this.carVisualBody = new THREE.Mesh(geometry, this.bodyMaterial);
     }
 
     //Creates a wheel in CANNON according to the passed parameters as well as the fitting visual representation in Three
@@ -100,11 +101,12 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         this.vehicleMass = this.vehicleMass + wheelMass;
 
         this.setWheelForce(
-            Math.max(5, Math.max(10 * this.bodyMass, 300)),
+            Math.max(5, Math.min(2 * this.bodyMass * wheelMass, 700)),
             this.wheelBodies.length - 1
         );
         console.log('bodymass: ' + this.bodyMass);
-        console.log(Math.max(5, Math.min(10 * this.bodyMass, 400)));
+        console.log('wheelmass: ' + wheelMass);
+        console.log(2 * this.bodyMass * wheelMass);
 
         //Add wheel visual body
         this.addWheelMesh(radius, width, scene);
@@ -115,7 +117,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         var wheelVisual = new THREE.CylinderGeometry(radius, radius, width, 24, 1);
         wheelVisual.rotateZ(Math.PI / 2);
         wheelVisual.rotateY(Math.PI / 2);
-        var mesh = new THREE.Mesh(wheelVisual, this.materialInteractive);
+        var mesh = new THREE.Mesh(wheelVisual, this.wheelMaterial);
 
         if (scene !== null) {
             scene.add(mesh);
