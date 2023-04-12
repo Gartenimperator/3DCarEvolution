@@ -261,6 +261,11 @@ export class ExtendedWorld extends World {
                 yDist * yDist - 2 * length * yDist * Math.cos((beta * Math.PI) / 180) + length * length
             );
 
+            //adjust displacement for larger gradients
+            if (90 < gradient || gradient < -90) {
+                xDist = -xDist;
+            }
+
             //Point to the placement (middle) of the neto be placed track piece
             currentPosition.x = currentPosition.x + xDist;
             currentPosition.y = currentPosition.y + yDist;

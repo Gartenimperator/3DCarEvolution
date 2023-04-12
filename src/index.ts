@@ -54,18 +54,18 @@ var steps: number[] = [
     0, -90, -90, -90, -90, 0, 0, -90, -90, -90, -90, 0, 0, -90, -90, -90, -90, 0, 0, -90, -90, -90,
     -90, 0, 0, -90
 ];
-var notWorking: number[] = [170, -170, -120];
+var nowWorking: number[] = [0, 10, 0, 0, 45, -45, -90, 180, -90, 0, 0, 0, 0, -110, -45, 0, -30, -20, 0, 10, 10];
 var jump: number[] = [0, -10, 0, 10, 20, -90, -90, -90, 0, 70, 80, 90, -10, 0, 0, 90];
 var simpleTrack: number[] = [
-    0, 15, 34, 40, 40, 20, 10, -30, -30, -30, -20, -10, 0, 10, 20, -90, 0, 80, -10, -10, -20, 0, 30,
+    0, 15, 34, 30, 30, 20, 10, -30, -30, -30, -20, -10, 0, 10, 20, -90, 0, 80, -10, -10, -20, 0, 30,
     20, 10, 0
 ];
 
-var trackGradients: number[] = simpleTrack;
+var trackGradients: number[] = steps;
 var trackPieceLengthX = 5;
 
 //Generic-Algorithm global variables
-var population: number = 50;
+var population: number = 2;
 var amountOfWorlds: number = 1;
 
 var timeOut: number = 420;
@@ -108,6 +108,7 @@ function initGraphics() {
         stats = Stats();
         stats.domElement.style.position = 'absolute';
         stats.domElement.style.top = '0px';
+        container.appendChild(stats.domElement);
 
         container.appendChild(renderer.domElement);
     }

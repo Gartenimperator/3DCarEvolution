@@ -10,7 +10,7 @@ import {Groups} from "./Groups";
  */
 export class ExtendedRigidVehicle extends RigidVehicle {
     wheelMeshes: Mesh[] = [];
-    carVisualBody: Mesh;
+    carVisualBody: Mesh = new Mesh();
     furthestPosition: CANNON.Vec3 = new CANNON.Vec3(0, 0, 0);
     timeOut: number = 0;
     bodyMass: number = 0;
