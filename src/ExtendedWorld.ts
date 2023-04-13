@@ -5,6 +5,7 @@ import {ExtendedRigidVehicle} from "./ExtendedRigidVehicle";
 import {PopulationManager} from "./PopulationManager";
 import {Groups} from "./Groups";
 import * as THREE from "three";
+import {Mesh} from "three";
 
 type Track = {
     /**
@@ -40,6 +41,7 @@ export type vehicleGenome = {
 export class ExtendedWorld extends World {
     scene: any;
     populationManager: PopulationManager;
+    cameraFocus: Mesh = new Mesh();
     cannonDebugRenderer: any;
     groundMaterial: CANNON.Material = new CANNON.Material('groundMaterial');
     wheelMaterial: CANNON.Material = new CANNON.Material('wheelMaterial');
@@ -66,6 +68,8 @@ export class ExtendedWorld extends World {
         this.populationManager = new PopulationManager();
         this.scene = scene;
         this.gravity.set(0, gravity, 0);
+
+        this.scene.add(this.cameraFocus);
 
         this.initCarGroundContact(
             groundBodyContactMaterialOptions,
@@ -110,17 +114,59 @@ export class ExtendedWorld extends World {
      * @param timeOut the max amout of timeOut a car can have.
      * @param camera the camera inside the scene.
      */
-    updatePhysicsAndScene(frameTime: number, timeOut: number, camera: THREE.PerspectiveCamera) {
+    updatePhysicsAndScene(frameTime: number, timeOut: number) {
         //world.step(frameTime, delta, 1);
         this.step(frameTime);
 
-        //update position of cars inside the scene.
-        this.populationManager.activeCars.forEach((car) => {
+        if (this.render) {
 
-            this.advanceTimeout(car, timeOut);
-            this.updateScene(car, camera)
+            if (this.populationManager.disabledCars.has(this.populationManager.leadingCar.id)) {
+                this.populationManager.leadingCar.chassisBody.position.set(-1,0,0);
+            }
 
-        });
+            //Update position of cars inside the scene.
+            this.populationManager.activeCars.forEach((car) => {
+                this.advanceTimeout(car, timeOut);
+                this.updateScene(car);
+            });
+
+            //Update the camera position.
+            var leadingPos = this.populationManager.leadingCar.chassisBody.position;
+            this.cameraFocus.position.set(leadingPos.x, leadingPos.y, leadingPos.z);
+
+        } else {
+
+            //Update only the cars physical body.
+            this.populationManager.activeCars.forEach((car) => {
+                this.advanceTimeout(car, timeOut);
+            });
+
+        }
+    }
+
+    /**
+     * Updates the position of the correspoding visualdBody of the passed car.
+     *
+     * @param car which will be rendered in the scene.
+     */
+    updateScene(car: ExtendedRigidVehicle) {
+        const posBody = car.chassisBody.position;
+        const quatBody = car.chassisBody.quaternion;
+
+        //Updating the leading car is only needed, if the worlds is being rendered.
+        if (this.populationManager.leadingCar.chassisBody.position.x < car.chassisBody.position.x) {
+            this.populationManager.leadingCar = car;
+        }
+
+        car.carVisualBody.position.set(posBody.x, posBody.y, posBody.z);
+        car.carVisualBody.quaternion.set(quatBody.x, quatBody.y, quatBody.z, quatBody.w);
+
+        for (var i = 0; i < car.wheelBodies.length; i++) {
+            const posWheel = car.wheelBodies[i].position;
+            const quatWheel = car.wheelBodies[i].quaternion;
+            car.wheelMeshes[i].position.set(posWheel.x, posWheel.y, posWheel.z);
+            car.wheelMeshes[i].quaternion.set(quatWheel.x, quatWheel.y, quatWheel.z, quatWheel.w);
+        }
     }
 
     /**
@@ -130,58 +176,8 @@ export class ExtendedWorld extends World {
      * @param timeOut the max amout of timeOut a car can have.
      */
     advanceTimeout(car: ExtendedRigidVehicle, timeOut: number) {
-
-        const posBody = car.chassisBody.position;
-
-        //A car needs to move 1 meter during the timeOut duration to not get timed-out.
-        if (posBody.x <= car.furthestPosition.x + 1 && posBody.z <= car.furthestPosition.z + 1) {
-            car.timeOut = car.timeOut + 1;
-
-            //Remove a car if it hasn't moved forward during the timeOut duration.
-            if (car.timeOut > timeOut) {
-                this.removeVehicle(car);
-            }
-
-        } else {
-            car.furthestPosition.set(posBody.x, posBody.y, posBody.z);
-            car.timeOut = 0;
-        }
-
-        //Also remove a car if it has fallen off the track.
-        if (posBody.y <= this.track.negativeYBorder) {
+        if (car.advanceTimeoutAndCheckForDisabled(timeOut, this.track.negativeYBorder)) {
             this.removeVehicle(car);
-        }
-    }
-
-    /**
-     * Updates the position of the correspoding visualdBody of the passed car. Also updates the cameras parent (and thus its position)
-     * should the leading vehicle change.
-     *
-     * @param car which will be rendered in the scene.
-     * @param camera which will possibly be updated.
-     */
-    updateScene(car: ExtendedRigidVehicle, camera: THREE.PerspectiveCamera) {
-        const posBody = car.chassisBody.position;
-        const quatBody = car.chassisBody.quaternion;
-        //Update the visual representation of the car if this world is being rendered.
-        if (this.render) {
-
-            if (this.populationManager.leadingCar.chassisBody.position.x < car.chassisBody.position.x) {
-                this.populationManager.leadingCar.cameraFocus.remove(camera);
-                car.cameraFocus.add(camera);
-                this.populationManager.leadingCar = car;
-            }
-
-            car.cameraFocus.position.set(posBody.x, posBody.y, posBody.z);
-            car.carVisualBody.position.set(posBody.x, posBody.y, posBody.z);
-            car.carVisualBody.quaternion.set(quatBody.x, quatBody.y, quatBody.z, quatBody.w);
-
-            for (var i = 0; i < car.wheelBodies.length; i++) {
-                const posWheel = car.wheelBodies[i].position;
-                const quatWheel = car.wheelBodies[i].quaternion;
-                car.wheelMeshes[i].position.set(posWheel.x, posWheel.y, posWheel.z);
-                car.wheelMeshes[i].quaternion.set(quatWheel.x, quatWheel.y, quatWheel.z, quatWheel.w);
-            }
         }
     }
 
@@ -260,6 +256,12 @@ export class ExtendedWorld extends World {
      * @param length of each track piece.
      */
     initTrackWithGradients(gradients: number[], length: number) {
+
+        //Remove the existing track
+        this.track.trackPieces.forEach((trackPiece) => {
+            this.removeBody(trackPiece);
+        });
+
         var rotateParallelToZAxis: CANNON.Quaternion;
 
         var trackPieceShape = new CANNON.Box(new CANNON.Vec3(length, 0.1, 50));
@@ -329,7 +331,6 @@ export class ExtendedWorld extends World {
             this.track.trackPieces.push(box);
         });
         this.track.negativeYBorder = lowestTrackPoint - 10;
-        console.log(this.track.negativeYBorder);
     }
 
     /**
@@ -347,7 +348,6 @@ export class ExtendedWorld extends World {
 
         //Add the visual body to the scene.
         this.scene.add(vehicle.carVisualBody);
-        this.scene.add(vehicle.cameraFocus);
 
         //Add wheels to the car.
         for (var i = 0; i < vehicleGenome.wheels.length; i++) {

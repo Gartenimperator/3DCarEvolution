@@ -30,6 +30,7 @@ var XPointer: any;
 // Physics variables
 
 var activeWorlds: Map<number, ExtendedWorld> = new Map();
+var worlds: ExtendedWorld[] = [];
 var inactiveWorlds: Map<number, ExtendedWorld> = new Map();
 var groundBodyContactMaterialOptions = {
     friction: 0.9,
@@ -152,10 +153,12 @@ function initWorlds() {
         );
         //world.initTrackWithHeightfield(matrix);
         world.initTrackWithGradients(trackGradients, trackPieceLengthX);
-
         activeWorlds.set(world.id, world);
+        worlds.push(world);
     }
-    console.log(activeWorlds);
+
+    //prepare world to render
+    worlds[0].cameraFocus.add(camera);
 }
 
 /**
@@ -170,7 +173,12 @@ function updatePhysics() {
     activeWorlds.forEach((world) => {
         //only update worlds with active cars
         if (world.populationManager.populationSize > 0) {
-            world.updatePhysicsAndScene(frameTime, timeOut, camera);
+            world.updatePhysicsAndScene(frameTime, timeOut);
+
+            //Also updates the cameras parent (and thus its position)
+            // should the leading vehicle change.
+
+
 
             //uncomment to view debug mode
             world.cannonDebugRenderer.update();

@@ -11,7 +11,6 @@ import {Groups} from "./Groups";
 export class ExtendedRigidVehicle extends RigidVehicle {
     wheelMeshes: Mesh[] = [];
     carVisualBody: Mesh = new Mesh();
-    cameraFocus: Mesh = new Mesh();
     furthestPosition: CANNON.Vec3 = new CANNON.Vec3(0, 0, 0);
     timeOut: number = 0;
     bodyMass: number = 0;
@@ -129,5 +128,39 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             scene.add(mesh);
         }
         this.wheelMeshes.push(mesh);
+    }
+
+    /**
+     * Updates the timeout of a car during the simulation and decides whever it should get timed-out.
+     *
+     * @param car which timeOut to calculate.
+     * @param timeOut the max amout of timeOut a car can have.
+     * @return true if and only if the car should be timedout.
+     */
+    advanceTimeoutAndCheckForDisabled(timeOut: number, yBorder: number): boolean {
+
+        const posBody = this.chassisBody.position;
+
+        //A car needs to move to the next 'full' meter during the timeOut duration to not get timed-out.
+        if (posBody.x <= Math.ceil(this.furthestPosition.x)) {
+            this.timeOut = this.timeOut + 1;
+
+            //Return true if this car hasn't moved forward during the timeOut duration.
+            if (this.timeOut > timeOut) {
+                return true;
+            }
+        } else {
+            this.timeOut = 0;
+        }
+
+        if (this.furthestPosition.x < posBody.x) {
+            this.furthestPosition.set(posBody.x, posBody.y, posBody.z);
+        }
+
+        //Return true if this car has fallen off the track.
+        if (posBody.y <= yBorder) {
+            return true;
+        }
+        return false;
     }
 }
