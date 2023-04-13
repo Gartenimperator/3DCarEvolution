@@ -4,6 +4,7 @@ import CannonDebugger from "cannon-es-debugger";
 import {ExtendedRigidVehicle} from "./ExtendedRigidVehicle";
 import {PopulationManager} from "./PopulationManager";
 import {Groups} from "./Groups";
+import * as THREE from "three";
 
 type Track = {
     /**
@@ -33,7 +34,9 @@ export type vehicleGenome = {
     wheels: wheel[],
 }
 
-//Extends the existing CANNON.World class to make interaction between Three and Cannon easier.
+/**
+ * Extends the existing CANNON.World class to make interaction between Three and Cannon easier.
+ */
 export class ExtendedWorld extends World {
     scene: any;
     populationManager: PopulationManager;
@@ -75,43 +78,23 @@ export class ExtendedWorld extends World {
         this.cannonDebugRenderer = CannonDebugger(this.scene, this);
     }
 
-    //Add new Cars according to the given populationSize.
+    /**
+     * Add new Cars according to the given populationSize.
+     * @param populationSize size of the to be created population.
+     */
     initNewPopulation(populationSize: number) {
         for (var j = 0; j < populationSize; j++) {
             this.addCar(this.populationManager.getRandomCar());
         }
     }
 
-    //Add a single car according to its passed genome.
+    /**
+     * Add a single vehicle to the world according to its passed genome.
+     * @param vehicleGenome which details the vehicle.
+     */
     addCar(vehicleGenome: vehicleGenome) {
 
-        let vehicle = new ExtendedRigidVehicle(
-            vehicleGenome.length,
-            vehicleGenome.height,
-            vehicleGenome.width,
-            this.bodyMaterial,
-            this.carIdCounter++
-        );
-
-        //Add the visual body to the scene.
-        this.scene.add(vehicle.carVisualBody);
-
-        //Add wheels to the car.
-        for (var i = 0; i < vehicleGenome.wheels.length; i++) {
-            var radius = vehicleGenome.wheels[i].radius;
-            console.log(radius);
-            var width = vehicleGenome.wheels[i].width;
-
-            vehicle.addWheelWithMesh(
-                radius,
-                width,
-                vehicleGenome.wheels[i].posX, //length - x
-                vehicleGenome.wheels[i].posY, //height - y
-                vehicleGenome.wheels[i].posZ, //width - z
-                this.scene,
-                this.wheelMaterial
-            );
-        }
+        const vehicle = this.buildVehicle(vehicleGenome);
 
         //TODO How to handle 'incorrect' wheels
         // fe wheels that would spawn too far away from the car
@@ -123,48 +106,89 @@ export class ExtendedWorld extends World {
     /**
      * Calculate a step inside the physicsengine and update the visuals for the cars accordingly.
      * FrameTime and the timeOut are passed as arguments to allow dynamic changes to these values.
+     * @param frameTime specifies the amount of steps per frame.
+     * @param timeOut the max amout of timeOut a car can have.
+     * @param camera the camera inside the scene.
      */
-    updatePhysicsAndScene(frameTime: number, timeOut: number) {
+    updatePhysicsAndScene(frameTime: number, timeOut: number, camera: THREE.PerspectiveCamera) {
         //world.step(frameTime, delta, 1);
         this.step(frameTime);
 
         //update position of cars inside the scene.
         this.populationManager.activeCars.forEach((car) => {
-            const posBody = car.chassisBody.position;
-            const quatBody = car.chassisBody.quaternion;
 
-            //A car needs to move 1 meter during the timeOut duration to not get timed-out.
-            if (posBody.x <= car.furthestPosition.x + 1) {
-                car.timeOut = car.timeOut + 1;
-                //Remove a car if it hasn't moved forward during the timeOut duration.
-                if (car.timeOut > timeOut) {
-                    this.removeVehicle(car);
-                }
-            } else {
-                car.furthestPosition.set(posBody.x, posBody.y, posBody.z);
-                car.timeOut = 0;
-            }
+            this.advanceTimeout(car, timeOut);
+            this.updateScene(car, camera)
 
-            //Also remove a car if it has fallen off the track.
-            if (posBody.y <= this.track.negativeYBorder) {
-                this.removeVehicle(car);
-            }
-
-            //Update the visual representation of the car if this world is being rendered.
-            if (this.render) {
-                car.carVisualBody.position.set(posBody.x, posBody.y, posBody.z);
-                car.carVisualBody.quaternion.set(quatBody.x, quatBody.y, quatBody.z, quatBody.w);
-                for (var i = 0; i < car.wheelBodies.length; i++) {
-                    const posWheel = car.wheelBodies[i].position;
-                    const quatWheel = car.wheelBodies[i].quaternion;
-                    car.wheelMeshes[i].position.set(posWheel.x, posWheel.y, posWheel.z);
-                    car.wheelMeshes[i].quaternion.set(quatWheel.x, quatWheel.y, quatWheel.z, quatWheel.w);
-                }
-            }
         });
     }
 
-    //Removes the given vehicle from this world and disables it in the populationManager.
+    /**
+     * Updates the timeout of a car during the simulation.
+     *
+     * @param car which timeOut to calculate.
+     * @param timeOut the max amout of timeOut a car can have.
+     */
+    advanceTimeout(car: ExtendedRigidVehicle, timeOut: number) {
+
+        const posBody = car.chassisBody.position;
+
+        //A car needs to move 1 meter during the timeOut duration to not get timed-out.
+        if (posBody.x <= car.furthestPosition.x + 1 && posBody.z <= car.furthestPosition.z + 1) {
+            car.timeOut = car.timeOut + 1;
+
+            //Remove a car if it hasn't moved forward during the timeOut duration.
+            if (car.timeOut > timeOut) {
+                this.removeVehicle(car);
+            }
+
+        } else {
+            car.furthestPosition.set(posBody.x, posBody.y, posBody.z);
+            car.timeOut = 0;
+        }
+
+        //Also remove a car if it has fallen off the track.
+        if (posBody.y <= this.track.negativeYBorder) {
+            this.removeVehicle(car);
+        }
+    }
+
+    /**
+     * Updates the position of the correspoding visualdBody of the passed car. Also updates the cameras parent (and thus its position)
+     * should the leading vehicle change.
+     *
+     * @param car which will be rendered in the scene.
+     * @param camera which will possibly be updated.
+     */
+    updateScene(car: ExtendedRigidVehicle, camera: THREE.PerspectiveCamera) {
+        const posBody = car.chassisBody.position;
+        const quatBody = car.chassisBody.quaternion;
+        //Update the visual representation of the car if this world is being rendered.
+        if (this.render) {
+
+            if (this.populationManager.leadingCar.chassisBody.position.x < car.chassisBody.position.x) {
+                this.populationManager.leadingCar.cameraFocus.remove(camera);
+                car.cameraFocus.add(camera);
+                this.populationManager.leadingCar = car;
+            }
+
+            car.cameraFocus.position.set(posBody.x, posBody.y, posBody.z);
+            car.carVisualBody.position.set(posBody.x, posBody.y, posBody.z);
+            car.carVisualBody.quaternion.set(quatBody.x, quatBody.y, quatBody.z, quatBody.w);
+
+            for (var i = 0; i < car.wheelBodies.length; i++) {
+                const posWheel = car.wheelBodies[i].position;
+                const quatWheel = car.wheelBodies[i].quaternion;
+                car.wheelMeshes[i].position.set(posWheel.x, posWheel.y, posWheel.z);
+                car.wheelMeshes[i].quaternion.set(quatWheel.x, quatWheel.y, quatWheel.z, quatWheel.w);
+            }
+        }
+    }
+
+    /**
+     * Removes the a vehicle from this world and disables it in the populationManager.
+     * @param vehicle to be removed.
+     */
     removeVehicle(vehicle: ExtendedRigidVehicle) {
         if (this.populationManager.disableCar(vehicle)) {
             vehicle.removeFromWorld(this);
@@ -180,8 +204,12 @@ export class ExtendedWorld extends World {
         }
     }
 
-    //Add the friction properties for the body-ground as well as the wheel-ground contact to the world.
-    initCarGroundContact(bodyGroundOptiones: any, wheelGroundOptions: any) {
+    /**
+     * Add the friction properties for the body-ground as well as the wheel-ground contact to the world.
+     * @param bodyGroundOptions options detailing the body-ground contact.
+     * @param wheelGroundOptions options detailing the wheel-ground contact.
+     */
+    initCarGroundContact(bodyGroundOptions: any, wheelGroundOptions: any) {
         this.broadphase = new CANNON.SAPBroadphase(this);
         this.defaultContactMaterial.friction = 1;
         var wheelGroundContactMaterial = new CANNON.ContactMaterial(
@@ -193,14 +221,17 @@ export class ExtendedWorld extends World {
         var bodyGroundContactMaterial = new CANNON.ContactMaterial(
             this.bodyMaterial,
             this.groundMaterial,
-            bodyGroundOptiones
+            bodyGroundOptions
         );
 
         this.addContactMaterial(wheelGroundContactMaterial);
         this.addContactMaterial(bodyGroundContactMaterial);
     }
 
-    //Creates a HeightField track with the given matrix. This approach causes the world to be very slow.
+    /**
+     * Creates a HeightField track with the given matrix. This approach causes the world to be very slow.
+     * @param matrix which details the HeightField.
+     */
     initTrackWithHeightfield(matrix: number[][]) {
         const heightfieldShape = new CANNON.Heightfield(matrix, {
             elementSize: 10
@@ -225,6 +256,8 @@ export class ExtendedWorld extends World {
      * So the first entry in the array defines the gradient of the first track piece.
      * This is considerably faster than using a HeightField and alowws the user to easily create tracks themselves but
      * also simplifies the track to a 2-dimensional plane. The gradients have to be between -90 and 90 degrees.
+     * @param gradients which detail the track.
+     * @param length of each track piece.
      */
     initTrackWithGradients(gradients: number[], length: number) {
         var rotateParallelToZAxis: CANNON.Quaternion;
@@ -297,5 +330,41 @@ export class ExtendedWorld extends World {
         });
         this.track.negativeYBorder = lowestTrackPoint - 10;
         console.log(this.track.negativeYBorder);
+    }
+
+    /**
+     * Helper method to create a ExtendedRigidVehicle from a vehicleGenome.
+     * @param vehicleGenome which details the ExtendedRigidVehicle.
+     */
+    buildVehicle(vehicleGenome: vehicleGenome): ExtendedRigidVehicle {
+        let vehicle = new ExtendedRigidVehicle(
+            vehicleGenome.length,
+            vehicleGenome.height,
+            vehicleGenome.width,
+            this.bodyMaterial,
+            this.carIdCounter++
+        );
+
+        //Add the visual body to the scene.
+        this.scene.add(vehicle.carVisualBody);
+        this.scene.add(vehicle.cameraFocus);
+
+        //Add wheels to the car.
+        for (var i = 0; i < vehicleGenome.wheels.length; i++) {
+            var radius = vehicleGenome.wheels[i].radius;
+            console.log(radius);
+            var width = vehicleGenome.wheels[i].width;
+
+            vehicle.addWheelWithMesh(
+                radius,
+                width,
+                vehicleGenome.wheels[i].posX, //length - x
+                vehicleGenome.wheels[i].posY, //height - y
+                vehicleGenome.wheels[i].posZ, //width - z
+                this.scene,
+                this.wheelMaterial
+            );
+        }
+        return vehicle;
     }
 }

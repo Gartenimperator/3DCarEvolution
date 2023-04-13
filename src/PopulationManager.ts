@@ -1,20 +1,34 @@
 import {ExtendedRigidVehicle} from "./ExtendedRigidVehicle";
 import {vehicleGenome, wheel} from "./ExtendedWorld";
 
-//Track a Population of vehicles and their status inside their world.
+/**
+ * Track a Population of vehicles and their status inside their world.
+ */
 export class PopulationManager {
+    leadingCar: ExtendedRigidVehicle;
     activeCars: Map<number, ExtendedRigidVehicle> = new Map();
     disabledCars: Map<number, ExtendedRigidVehicle> = new Map();
     populationSize: number = 0;
 
-    constructor() {}
+    constructor() {
+        //dummy vehicle
+        this.leadingCar = new ExtendedRigidVehicle(1, 1, 1, undefined, -1);
+        this.leadingCar.chassisBody.position.set(-0.01, 5, 0);
+    }
 
+    /**
+     * Adds a vehicle to the popualtion and sets it as active.
+     * @param vehicle which is added.
+     */
     addCar(vehicle: ExtendedRigidVehicle) {
         this.activeCars.set(vehicle.id, vehicle);
         this.populationSize++;
     }
 
-    //Disable the given vehicle and lower the populationSize
+    /**
+     * Disable the given vehicle and lower the populationSize
+     * @param car to disable.
+     */
     disableCar(car: ExtendedRigidVehicle): boolean {
         if (this.activeCars.delete(car.id)) {
             this.disabledCars.set(car.id, car);

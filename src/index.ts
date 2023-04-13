@@ -18,7 +18,11 @@ var stats: any;
 
 // Graphics variables
 var container: HTMLElement | null;
-var camera: any, scene: any, renderer: any;
+var camera: THREE.PerspectiveCamera, scene: any, renderer: any;
+
+// for more Info on the fakeCamera: https://stackoverflow.com/questions/53292145/forcing-orbitcontrols-to-navigate-around-a-moving-object-almost-working/53298655#53298655
+var fakeCamera: THREE.PerspectiveCamera;
+
 var controls: OrbitControls;
 var materialDynamic, materialStatic;
 var XPointer: any;
@@ -61,19 +65,14 @@ var simpleTrack: number[] = [
     20, 10, 0
 ];
 
-var trackGradients: number[] = steps;
+var trackGradients: number[] = simpleTrack;
 var trackPieceLengthX = 5;
 
 //Generic-Algorithm global variables
-var population: number = 2;
+var population: number = 50;
 var amountOfWorlds: number = 1;
 
 var timeOut: number = 420;
-
-//Collision Groups
-var GROUP1 = 1;
-var GROUP2 = 2;
-var GROUP3 = 4;
 
 function initGraphics() {
     container = document.getElementById('simulationWindow');
@@ -81,8 +80,8 @@ function initGraphics() {
     scene = new THREE.Scene();
 
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 500);
-    camera.position.x = -20;
-    camera.position.y = 20;
+    camera.position.x = -40;
+    camera.position.y = 40;
     camera.position.z = 0;
     camera.lookAt(new THREE.Vector3(0, 3, 0));
 
@@ -103,7 +102,12 @@ function initGraphics() {
 
     if (container !== null) {
         container.innerHTML = '';
-        controls = new OrbitControls(camera, renderer.domElement);
+
+        //See link at the top, as to why I do this
+        fakeCamera = camera.clone();
+        controls = new OrbitControls(fakeCamera, renderer.domElement);
+        controls.enablePan = false;
+        controls.enableDamping = false;
 
         stats = Stats();
         stats.domElement.style.position = 'absolute';
@@ -166,7 +170,7 @@ function updatePhysics() {
     activeWorlds.forEach((world) => {
         //only update worlds with active cars
         if (world.populationManager.populationSize > 0) {
-            world.updatePhysicsAndScene(frameTime, timeOut);
+            world.updatePhysicsAndScene(frameTime, timeOut, camera);
 
             //uncomment to view debug mode
             world.cannonDebugRenderer.update();
@@ -182,6 +186,9 @@ function updatePhysics() {
  * Looping function which syncs the Three.scene and ExtendendWorld after each calculation step.
  */
 function render() {
+
+    camera.copy(fakeCamera);
+
     requestAnimationFrame(render);
 
     if (activeWorlds.size > 0) {

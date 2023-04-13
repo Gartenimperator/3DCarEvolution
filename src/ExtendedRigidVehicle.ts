@@ -11,6 +11,7 @@ import {Groups} from "./Groups";
 export class ExtendedRigidVehicle extends RigidVehicle {
     wheelMeshes: Mesh[] = [];
     carVisualBody: Mesh = new Mesh();
+    cameraFocus: Mesh = new Mesh();
     furthestPosition: CANNON.Vec3 = new CANNON.Vec3(0, 0, 0);
     timeOut: number = 0;
     bodyMass: number = 0;
@@ -26,7 +27,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         lengthX: number,
         lengthY: number,
         lengthZ: number,
-        bodyMaterial: CANNON.Material,
+        bodyMaterial: CANNON.Material | undefined,
         id: number
     ) {
         super();
@@ -35,13 +36,18 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     }
 
     /**
-     *  Creates a vehicle body in CANNON according to the passed parameters and stores the fitting visual representation in this.carVisualBody.
+     * Creates a vehicle body in CANNON according to the passed parameters and stores the fitting visual representation in this.carVisualBody.
+     * @param lengthX length of the car.
+     * @param lengthY width of the car.
+     * @param lengthZ height of the car.
+     * @param bodyMaterial defines the bodyMaterial. Needed to calculate collisions between this vehicle and track.
+     * @private
      */
     private addCarAndMesh(
         lengthX: number,
         lengthY: number,
         lengthZ: number,
-        bodyMaterial: CANNON.Material
+        bodyMaterial: CANNON.Material | undefined
     ) {
         //Add physical Body
         var chassisShape = new CANNON.Box(new CANNON.Vec3(lengthX, lengthY, lengthZ));
@@ -101,7 +107,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         this.vehicleMass = this.vehicleMass + wheelMass;
 
         this.setWheelForce(
-            Math.max(5, Math.min(2 * this.bodyMass * wheelMass, 700)),
+            Math.max(5, Math.min(3 * this.bodyMass * wheelMass, 700)),
             this.wheelBodies.length - 1
         );
         console.log('bodymass: ' + this.bodyMass);
