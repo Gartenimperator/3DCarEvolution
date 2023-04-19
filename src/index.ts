@@ -1,6 +1,3 @@
-import type { Mesh } from 'three';
-
-import * as CANNON from 'cannon-es';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module';
@@ -73,7 +70,7 @@ var trackPieceLengthX = 5;
 var population: number = 50;
 var amountOfWorlds: number = 1;
 
-var timeOut: number = 420;
+var timeOut: number = 360;
 
 function initGraphics() {
     container = document.getElementById('simulationWindow');
@@ -107,8 +104,6 @@ function initGraphics() {
         //See link at the top, as to why I do this
         fakeCamera = camera.clone();
         controls = new OrbitControls(fakeCamera, renderer.domElement);
-        controls.enablePan = false;
-        controls.enableDamping = false;
 
         stats = Stats();
         stats.domElement.style.position = 'absolute';
@@ -126,15 +121,6 @@ function initGraphics() {
     XPointer = new THREE.Mesh(geometryX, materialX);
     XPointer.rotation.x = Math.PI / 2;
     scene.add(XPointer);
-
-    //window.addEventListener('resize', onWindowResize, false);
-}
-
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-
-    renderer.setSize(window.innerWidth * 0.8, window.innerHeight * 0.8);
 }
 
 /**
@@ -151,6 +137,7 @@ function initWorlds() {
             population,
             i
         );
+
         //world.initTrackWithHeightfield(matrix);
         world.initTrackWithGradients(trackGradients, trackPieceLengthX);
         activeWorlds.set(world.id, world);
@@ -166,19 +153,14 @@ function initWorlds() {
  **/
 
 /**
- * Calculates one step for each active world.
+ * Calculates one step for each active CANNON-world while updating the THREE visual accordingly.
  */
 function updatePhysics() {
-    // update the chassis position
     activeWorlds.forEach((world) => {
         //only update worlds with active cars
-        if (world.populationManager.populationSize > 0) {
+        if (world.isActive()) {
+
             world.updatePhysicsAndScene(frameTime, timeOut);
-
-            //Also updates the cameras parent (and thus its position)
-            // should the leading vehicle change.
-
-
 
             //uncomment to view debug mode
             world.cannonDebugRenderer.update();

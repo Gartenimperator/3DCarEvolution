@@ -4,7 +4,6 @@ import CannonDebugger from "cannon-es-debugger";
 import {ExtendedRigidVehicle} from "./ExtendedRigidVehicle";
 import {PopulationManager} from "./PopulationManager";
 import {Groups} from "./Groups";
-import * as THREE from "three";
 import {Mesh} from "three";
 
 type Track = {
@@ -65,7 +64,7 @@ export class ExtendedWorld extends World {
     ) {
         super(options);
         this.id = id;
-        this.populationManager = new PopulationManager();
+        this.populationManager = new PopulationManager(populationSize);
         this.scene = scene;
         this.gravity.set(0, gravity, 0);
 
@@ -76,18 +75,19 @@ export class ExtendedWorld extends World {
             groundWheelContactMaterialOptions
         );
 
-        this.initNewPopulation(populationSize);
+        this.initNewPopulation();
 
         //Can be removed if debugging is unnecessary.
         this.cannonDebugRenderer = CannonDebugger(this.scene, this);
     }
 
     /**
-     * Add new Cars according to the given populationSize.
-     * @param populationSize size of the to be created population.
+     * Replace the current population with a new one according to the current populationSize.
      */
-    initNewPopulation(populationSize: number) {
-        for (var j = 0; j < populationSize; j++) {
+    initNewPopulation() {
+        this.populationManager.activeCars.clear();
+        this.populationManager.disabledCars.clear();
+        for (var j = 0; j < this.populationManager.populationSize; j++) {
             this.addCar(this.populationManager.getRandomCar());
         }
     }
@@ -112,7 +112,6 @@ export class ExtendedWorld extends World {
      * FrameTime and the timeOut are passed as arguments to allow dynamic changes to these values.
      * @param frameTime specifies the amount of steps per frame.
      * @param timeOut the max amout of timeOut a car can have.
-     * @param camera the camera inside the scene.
      */
     updatePhysicsAndScene(frameTime: number, timeOut: number) {
         //world.step(frameTime, delta, 1);
@@ -120,8 +119,9 @@ export class ExtendedWorld extends World {
 
         if (this.render) {
 
-            if (this.populationManager.disabledCars.has(this.populationManager.leadingCar.id)) {
-                this.populationManager.leadingCar.chassisBody.position.set(-1,0,0);
+            //Update leading car.
+            if (this.populationManager.disabledCars.has(this.populationManager.leadingCar.id) && this.populationManager.activeCars.size > 0) {
+                    this.populationManager.leadingCar.chassisBody.position.set(-1, 0, 0);
             }
 
             //Update position of cars inside the scene.
@@ -158,8 +158,8 @@ export class ExtendedWorld extends World {
             this.populationManager.leadingCar = car;
         }
 
-        car.carVisualBody.position.set(posBody.x, posBody.y, posBody.z);
-        car.carVisualBody.quaternion.set(quatBody.x, quatBody.y, quatBody.z, quatBody.w);
+        car.visualBody.position.set(posBody.x, posBody.y, posBody.z);
+        car.visualBody.quaternion.set(quatBody.x, quatBody.y, quatBody.z, quatBody.w);
 
         for (var i = 0; i < car.wheelBodies.length; i++) {
             const posWheel = car.wheelBodies[i].position;
@@ -176,7 +176,7 @@ export class ExtendedWorld extends World {
      * @param timeOut the max amout of timeOut a car can have.
      */
     advanceTimeout(car: ExtendedRigidVehicle, timeOut: number) {
-        if (car.advanceTimeoutAndCheckForDisabled(timeOut, this.track.negativeYBorder)) {
+        if (car.advanceTimeoutAndCheckIfDisabled(timeOut, this.track.negativeYBorder)) {
             this.removeVehicle(car);
         }
     }
@@ -268,7 +268,7 @@ export class ExtendedWorld extends World {
         var lowestTrackPoint: number = 0;
 
         //The Track always starts on a 10m * 50m plane to allow the cars to spawn correctly
-        var planeBody = new CANNON.Body({
+        var trackBody = new CANNON.Body({
             mass: 0, // mass = 0 makes the body static
             material: this.groundMaterial,
             shape: new CANNON.Box(new CANNON.Vec3(10, 0.1, 50)),
@@ -276,8 +276,8 @@ export class ExtendedWorld extends World {
             collisionFilterMask: Groups.GROUP1
         });
 
-        this.addBody(planeBody);
-        this.track.trackPieces.push(planeBody);
+        this.addBody(trackBody);
+        this.track.trackPieces.push(trackBody);
 
         //the always track starts 10 Meters in front of the cars
         var currentPosition: CANNON.Vec3 = new CANNON.Vec3(10, 0, 0);
@@ -347,12 +347,11 @@ export class ExtendedWorld extends World {
         );
 
         //Add the visual body to the scene.
-        this.scene.add(vehicle.carVisualBody);
+        this.scene.add(vehicle.visualBody);
 
         //Add wheels to the car.
         for (var i = 0; i < vehicleGenome.wheels.length; i++) {
             var radius = vehicleGenome.wheels[i].radius;
-            console.log(radius);
             var width = vehicleGenome.wheels[i].width;
 
             vehicle.addWheelWithMesh(
@@ -364,7 +363,12 @@ export class ExtendedWorld extends World {
                 this.scene,
                 this.wheelMaterial
             );
+
         }
         return vehicle;
+    }
+
+    isActive(): boolean {
+        return true;
     }
 }

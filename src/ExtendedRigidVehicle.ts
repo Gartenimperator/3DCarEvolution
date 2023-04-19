@@ -1,7 +1,7 @@
 import * as CANNON from "cannon-es";
 import {RigidVehicle} from "cannon-es";
 import * as THREE from "three";
-import {Mesh} from "three";
+import {Material, Mesh} from "three";
 import {Groups} from "./Groups";
 
 /**
@@ -10,16 +10,22 @@ import {Groups} from "./Groups";
  */
 export class ExtendedRigidVehicle extends RigidVehicle {
     wheelMeshes: Mesh[] = [];
-    carVisualBody: Mesh = new Mesh();
+    visualBody: Mesh = new Mesh();
     furthestPosition: CANNON.Vec3 = new CANNON.Vec3(0, 0, 0);
     timeOut: number = 0;
     bodyMass: number = 0;
     vehicleMass: number = 0;
     id: number;
-    wheelMaterial = new THREE.MeshPhongMaterial({ color: 0x2A292B });
+    wheelMaterial = new THREE.MeshPhongMaterial({
+        color: 0x2A292B,
+        transparent: true,
+        opacity: 1.0
+    });
     bodyMaterial = new THREE.MeshPhongMaterial({
         color: 0xDD6E0F,
-        side: THREE.DoubleSide
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 1.0
     });
 
     constructor(
@@ -35,7 +41,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     }
 
     /**
-     * Creates a vehicle body in CANNON according to the passed parameters and stores the fitting visual representation in this.carVisualBody.
+     * Creates a vehicle body in CANNON according to the passed parameters and stores the fitting visual representation in this.visualBody.
      * @param lengthX length of the car.
      * @param lengthY width of the car.
      * @param lengthZ height of the car.
@@ -51,24 +57,49 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         //Add physical Body
         var chassisShape = new CANNON.Box(new CANNON.Vec3(lengthX, lengthY, lengthZ));
 
+        let vertices: CANNON.Vec3[] = [
+            new CANNON.Vec3(0, 0, 0),
+            new CANNON.Vec3(1, 10, -5),
+            new CANNON.Vec3(5, 0, 5),
+            new CANNON.Vec3(-5, 0, 0)
+        ];
+
+        let faces = [
+            [0, 3, 1],
+            [0, 1, 2],
+            [0, 2, 3],
+            [2, 1, 3]
+        ]
+
+        let polyoptions = {
+            vertices: vertices,
+            faces: faces
+        }
+        let chassisShapeComplex = new CANNON.ConvexPolyhedron(polyoptions);
+
         //the bodyMass can't be lighter than 1 Kg
         this.bodyMass = Math.max(lengthX * lengthY * lengthZ, 1);
         this.vehicleMass = this.vehicleMass + this.bodyMass;
 
+        var body = new CANNON.Body({mass: 100});
+
+        body.addShape(chassisShapeComplex)
+
         var chassisBody = new CANNON.Body({
-            mass: this.bodyMass,
-            position: new CANNON.Vec3(0, 5, 0), //cars spawn 5 meters in the air.
+            mass: 100,
+            position: new CANNON.Vec3(0, 10, 0), //cars spawn 5 meters in the air.
             material: bodyMaterial,
             collisionFilterGroup: Groups.GROUP1,
-            collisionFilterMask: Groups.GROUP2 | Groups.GROUP3
+            collisionFilterMask: Groups.GROUP2 | Groups.GROUP3,
+            shape: chassisShapeComplex
         });
-        chassisBody.addShape(chassisShape);
+
         this.chassisBody = chassisBody;
 
         //Add visual Body
-        var geometry = new THREE.BoxGeometry(lengthX * 2, lengthY * 2, lengthZ * 2); // double chasis shape
+        var geometry = this.createThreeGeometry(vertices, faces); // double chasis shape
 
-        this.carVisualBody = new THREE.Mesh(geometry, this.bodyMaterial);
+        this.visualBody = new THREE.Mesh(geometry, this.bodyMaterial);
     }
 
     //Creates a wheel in CANNON according to the passed parameters as well as the fitting visual representation in Three
@@ -133,11 +164,11 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     /**
      * Updates the timeout of a car during the simulation and decides whever it should get timed-out.
      *
-     * @param car which timeOut to calculate.
      * @param timeOut the max amout of timeOut a car can have.
+     * @param yBorder describes the lowest point of the track.
      * @return true if and only if the car should be timedout.
      */
-    advanceTimeoutAndCheckForDisabled(timeOut: number, yBorder: number): boolean {
+    advanceTimeoutAndCheckIfDisabled(timeOut: number, yBorder: number): boolean {
 
         const posBody = this.chassisBody.position;
 
@@ -158,9 +189,62 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         }
 
         //Return true if this car has fallen off the track.
-        if (posBody.y <= yBorder) {
-            return true;
+        return posBody.y <= yBorder;
+    }
+
+    /**
+     * Updates the opacity of the car to signal that it got disabled.
+     */
+    disable() {
+        if (this.visualBody.material instanceof Material) {
+            this.visualBody.material.opacity = 0.5;
         }
-        return false;
+
+        this.wheelMeshes.forEach(wheel => {
+            if (wheel.material instanceof Material) {
+                wheel.material.opacity = 0.5;
+            }
+        });
+    }
+
+    /**
+     * Construct a THREE.BufferGeometry from the given vertices and faces in O(faces.length * face.averageLength - 2).
+     * Since Cannon and Three construct Polyhedrons differently this conversion is needed.
+     * A Three.BufferGeometry is given an array of vertices and according
+     * to the itemSize (3) it constructs the geometric shape out of triangles. Faces which can consist of more than 3
+     * vertices are split into triangles so the BufferGeometry can process them correctly. Since every face is always a
+     * convex shape this is easily doable by selecting an anchor point and drawing triangles to two neighbouring points
+     * (excluding the anchor point).
+     * For example a pentagon with points {0, 1, 2, 3, 4} (in order and with anchor point 0) will be split into:
+     * {0, 1, 2}, {0, 2, 3}, {0, 3, 4}.
+     *
+     *
+     * @param vertices contain all of the Vertices.
+     * @param faces define the faces created by the vertices.
+     */
+    createThreeGeometry(vertices: CANNON.Vec3[], faces: number[[]]): THREE.BufferGeometry {
+
+        let convertedVertices: number[] = [];
+
+        faces.forEach(face => {
+            for (let i = 0; i < face.length - 2; i++) {
+                convertedVertices.push(vertices[face[0]].x);
+                convertedVertices.push(vertices[face[0]].y);
+                convertedVertices.push(vertices[face[0]].z);
+                convertedVertices.push(vertices[face[i + 1]].x);
+                convertedVertices.push(vertices[face[i + 1]].y);
+                convertedVertices.push(vertices[face[i + 1]].z);
+                convertedVertices.push(vertices[face[i + 2]].x);
+                convertedVertices.push(vertices[face[i + 2]].y);
+                convertedVertices.push(vertices[face[i + 2]].z);
+            }
+        })
+
+        let floatVertices = new Float32Array(convertedVertices);
+
+        let geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(floatVertices, 3));
+
+        return geometry;
     }
 }

@@ -10,19 +10,19 @@ export class PopulationManager {
     disabledCars: Map<number, ExtendedRigidVehicle> = new Map();
     populationSize: number = 0;
 
-    constructor() {
+    constructor(populationSize: number) {
         //dummy vehicle
         this.leadingCar = new ExtendedRigidVehicle(1, 1, 1, undefined, -1);
         this.leadingCar.chassisBody.position.set(-0.01, 5, 0);
+        this.populationSize = populationSize;
     }
 
     /**
-     * Adds a vehicle to the popualtion and sets it as active.
+     * Adds a vehicle to the population and sets it as active.
      * @param vehicle which is added.
      */
     addCar(vehicle: ExtendedRigidVehicle) {
         this.activeCars.set(vehicle.id, vehicle);
-        this.populationSize++;
     }
 
     /**
@@ -31,12 +31,12 @@ export class PopulationManager {
      */
     disableCar(car: ExtendedRigidVehicle): boolean {
         if (this.activeCars.delete(car.id)) {
+            car.disable();
             this.disabledCars.set(car.id, car);
         } else {
             console.log("Tried to remove a car which isn't part of the population");
             return false;
         }
-        this.populationSize--;
         return true;
     }
 
