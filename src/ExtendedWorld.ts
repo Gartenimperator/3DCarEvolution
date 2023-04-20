@@ -4,13 +4,18 @@ import CannonDebugger from "cannon-es-debugger";
 import {ExtendedRigidVehicle} from "./ExtendedRigidVehicle";
 import {PopulationManager} from "./PopulationManager";
 import {Groups} from "./Groups";
-import {Mesh} from "three";
+import {Mesh, Object3D, Scene} from "three";
 
 type Track = {
     /**
-     * All track pieces in linear order.
+     * All physical bodies of the track pieces in linear order.
      */
     trackPieces: CANNON.Body[];
+
+    /**
+     * All Meshes of the track pieces in linear order.
+     */
+    threeJSTrackPieces: Mesh[];
 
     /**
      * The lowest point of the track.
@@ -19,6 +24,7 @@ type Track = {
 }
 
 export type wheel = {
+    material: CANNON.Material,
     radius: number,
     width: number,
     posX: number,
@@ -38,27 +44,30 @@ export type vehicleGenome = {
  * Extends the existing CANNON.World class to make interaction between Three and Cannon easier.
  */
 export class ExtendedWorld extends World {
-    scene: any;
+    scene: Scene;
     populationManager: PopulationManager;
     cameraFocus: Mesh = new Mesh();
     cannonDebugRenderer: any;
     groundMaterial: CANNON.Material = new CANNON.Material('groundMaterial');
-    wheelMaterial: CANNON.Material = new CANNON.Material('wheelMaterial');
+    wheelMaterialLowFriction: CANNON.Material = new CANNON.Material('lowFriction');
+    wheelMaterialMediumFriction: CANNON.Material = new CANNON.Material('mediumFriction');
+    wheelMaterialHighFriction: CANNON.Material = new CANNON.Material('highFriction');
     bodyMaterial: CANNON.Material = new CANNON.Material('bodyMaterial');
     carIdCounter: number = 0;
     id: number;
     track: Track = {
         trackPieces: [],
         negativeYBorder: 0,
+        threeJSTrackPieces: []
     };
     render: boolean = true;
+    disabled: boolean = false;
 
     constructor(
         scene: any,
         options: any,
         gravity: number,
         groundBodyContactMaterialOptions: any,
-        groundWheelContactMaterialOptions: any,
         populationSize: number,
         id: number
     ) {
@@ -71,8 +80,7 @@ export class ExtendedWorld extends World {
         this.scene.add(this.cameraFocus);
 
         this.initCarGroundContact(
-            groundBodyContactMaterialOptions,
-            groundWheelContactMaterialOptions
+            groundBodyContactMaterialOptions
         );
 
         this.initNewPopulation();
@@ -88,7 +96,7 @@ export class ExtendedWorld extends World {
         this.populationManager.activeCars.clear();
         this.populationManager.disabledCars.clear();
         for (var j = 0; j < this.populationManager.populationSize; j++) {
-            this.addCar(this.populationManager.getRandomCar());
+            this.addCar(this.createRandomCar());
         }
     }
 
@@ -97,11 +105,13 @@ export class ExtendedWorld extends World {
      * @param vehicleGenome which details the vehicle.
      */
     addCar(vehicleGenome: vehicleGenome) {
-
-        const vehicle = this.buildVehicle(vehicleGenome);
-
-        //TODO How to handle 'incorrect' wheels
-        // fe wheels that would spawn too far away from the car
+        console.log(vehicleGenome);
+        const vehicle = new ExtendedRigidVehicle(
+            vehicleGenome,
+            this.bodyMaterial,
+            this.scene,
+            this.carIdCounter++
+        );
 
         this.populationManager.addCar(vehicle);
         vehicle.addToWorld(this);
@@ -120,8 +130,13 @@ export class ExtendedWorld extends World {
         if (this.render) {
 
             //Update leading car.
-            if (this.populationManager.disabledCars.has(this.populationManager.leadingCar.id) && this.populationManager.activeCars.size > 0) {
+            if (this.populationManager.disabledCars.has(this.populationManager.leadingCar.id) ) {
+                if (this.populationManager.activeCars.size > 0) {
                     this.populationManager.leadingCar.chassisBody.position.set(-1, 0, 0);
+                } else {
+                    this.disabled = true;
+                    return;
+                }
             }
 
             //Update position of cars inside the scene.
@@ -203,13 +218,35 @@ export class ExtendedWorld extends World {
     /**
      * Add the friction properties for the body-ground as well as the wheel-ground contact to the world.
      * @param bodyGroundOptions options detailing the body-ground contact.
-     * @param wheelGroundOptions options detailing the wheel-ground contact.
      */
-    initCarGroundContact(bodyGroundOptions: any, wheelGroundOptions: any) {
+    initCarGroundContact(bodyGroundOptions: any) {
         this.broadphase = new CANNON.SAPBroadphase(this);
         this.defaultContactMaterial.friction = 1;
-        var wheelGroundContactMaterial = new CANNON.ContactMaterial(
-            this.wheelMaterial,
+
+        var wheelGroundOptions = {
+            friction: 0.4,
+            restitution: 0.3,
+            contactEquationRelaxation: 3,
+            frictionEquationStiffness: 1e8
+        };
+
+        wheelGroundOptions.friction = 0.2;
+        var wheelGroundContactMaterialLowFriction = new CANNON.ContactMaterial(
+            this.wheelMaterialLowFriction,
+            this.groundMaterial,
+            wheelGroundOptions
+        );
+
+        wheelGroundOptions.friction = 0.5;
+        var wheelGroundContactMaterialMediumFriction = new CANNON.ContactMaterial(
+            this.wheelMaterialMediumFriction,
+            this.groundMaterial,
+            wheelGroundOptions
+        );
+
+        wheelGroundOptions.friction = 0.8;
+        var wheelGroundContactMaterialHighFriction = new CANNON.ContactMaterial(
+            this.wheelMaterialHighFriction,
             this.groundMaterial,
             wheelGroundOptions
         );
@@ -220,7 +257,9 @@ export class ExtendedWorld extends World {
             bodyGroundOptions
         );
 
-        this.addContactMaterial(wheelGroundContactMaterial);
+        this.addContactMaterial(wheelGroundContactMaterialLowFriction);
+        this.addContactMaterial(wheelGroundContactMaterialMediumFriction);
+        this.addContactMaterial(wheelGroundContactMaterialHighFriction);
         this.addContactMaterial(bodyGroundContactMaterial);
     }
 
@@ -334,41 +373,95 @@ export class ExtendedWorld extends World {
     }
 
     /**
-     * Helper method to create a ExtendedRigidVehicle from a vehicleGenome.
-     * @param vehicleGenome which details the ExtendedRigidVehicle.
+     * @return if the world is active.
      */
-    buildVehicle(vehicleGenome: vehicleGenome): ExtendedRigidVehicle {
-        let vehicle = new ExtendedRigidVehicle(
-            vehicleGenome.length,
-            vehicleGenome.height,
-            vehicleGenome.width,
-            this.bodyMaterial,
-            this.carIdCounter++
-        );
+    isActive(): boolean {
+        return !this.disabled;
+    }
 
-        //Add the visual body to the scene.
-        this.scene.add(vehicle.visualBody);
+    /**
+     *
+     */
+    generateNextGeneration() {
+        this.populationManager;
+    }
 
-        //Add wheels to the car.
-        for (var i = 0; i < vehicleGenome.wheels.length; i++) {
-            var radius = vehicleGenome.wheels[i].radius;
-            var width = vehicleGenome.wheels[i].width;
+    /**
+     * Removes the soon-to-be old Meshes of each vehicle.
+     */
+    async cleanUpCurrentGeneration() {
+        this.populationManager.disabledCars.forEach(vehicle => {
+            vehicle.wheelMeshes.forEach(wheelMesh => {
+                this.removeObjectFromScene(wheelMesh);
+            })
 
-            vehicle.addWheelWithMesh(
-                radius,
-                width,
-                vehicleGenome.wheels[i].posX, //length - x
-                vehicleGenome.wheels[i].posY, //height - y
-                vehicleGenome.wheels[i].posZ, //width - z
-                this.scene,
-                this.wheelMaterial
-            );
+            this.removeObjectFromScene(vehicle.visualBody);
+        })
+    }
 
+    /**
+     * Removing an Object from the scene needs to be done correctly to avoid memory leaks, as
+     * the render and the scene itself can store separate references.
+     * @param object3D the object to be removed from the scene.
+     */
+    removeObjectFromScene(object3D) {
+        if (!(object3D instanceof Object3D)) return false;
+
+        // for better memory management and performance
+        if (object3D.geometry) object3D.geometry.dispose();
+
+        if (object3D.material) {
+            if (object3D.material instanceof Array) {
+                // for better memory management and performance
+                object3D.material.forEach(material => material.dispose());
+            } else {
+                // for better memory management and performance
+                object3D.material.dispose();
+            }
         }
+        object3D.removeFromParent(); // the parent might be the scene or another Object3D, but it is sure to be removed this way
+        return true;
+    }
+
+    /**
+     * Generates a new random vehicle. This vehicle hax a maximum length of 5 and a maximum width/height of 2 meters.
+     * The amout, placement and size of wheels is also randomly generated. The wheel radius and width have a maximum size of 1 meter.
+     * The wheel position is generated according to the size of the vehicle body, so that the wheels center has to always touch the body.
+     */
+    createRandomCar(): vehicleGenome {
+        //GenerateRandomCar Here
+        var vehicle: vehicleGenome = {
+            baseWeight: (this.roundToFour(Math.random() * 50)), //base weigth - influences the cars calculated weight and its engine power
+            length: (this.roundToFour(Math.random() * 7)),
+            height: (this.roundToFour(Math.random() * 2)),
+            width: (this.roundToFour(Math.random() * 5)),
+            wheels: []
+        };
+
+        var wheelAmount = Math.floor(Math.random() * 5);
+
+        //TODO How to handle 'incorrect' wheels
+        // fe wheels that would spawn too far away from the car
+        for (var i = 0; i < wheelAmount; i++) {
+            var wheel: wheel = {
+                radius: (this.roundToFour(Math.max(1.5, Math.random() * 3))), //wheel radius [1.5, 3)
+                width: (this.roundToFour(2.5 - Math.random())), //wheel width (1.5, 2.5]
+
+                //Try to generate wheels which are touching the car
+                posX: (this.roundToFour(-vehicle.length + vehicle.length * Math.random() * 2)), //wheel position lengthwise
+                posY: (this.roundToFour(-vehicle.height + vehicle.height * Math.random() * 2)), //wheel position height
+                posZ: (this.roundToFour(-vehicle.width + vehicle.width * Math.random() * 2)), //wheel position width
+
+                material: this.wheelMaterialMediumFriction,
+            };
+            vehicle.wheels.push(wheel);
+        }
+
         return vehicle;
     }
 
-    isActive(): boolean {
-        return true;
+    // custom round function
+    roundToFour(num: number) {
+        return +(Math.round(num * 10000) / 10000);
     }
 }

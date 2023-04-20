@@ -1,8 +1,9 @@
 import * as CANNON from "cannon-es";
 import {RigidVehicle} from "cannon-es";
 import * as THREE from "three";
-import {Material, Mesh} from "three";
+import {Material, Mesh, Scene} from "three";
 import {Groups} from "./Groups";
+import {vehicleGenome} from "./ExtendedWorld";
 
 /**
  * Extends the existing CANNON.RigidVehicle class to make interaction between Three and Cannon easier.
@@ -16,47 +17,63 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     bodyMass: number = 0;
     vehicleMass: number = 0;
     id: number;
-    wheelMaterial = new THREE.MeshPhongMaterial({
+    wheelMaterial = new THREE.MeshBasicMaterial({
         color: 0x2A292B,
         transparent: true,
         opacity: 1.0
     });
-    bodyMaterial = new THREE.MeshPhongMaterial({
-        color: 0xDD6E0F,
-        side: THREE.DoubleSide,
+    bodyMaterial = new THREE.MeshBasicMaterial({
+        color: 'red',
         transparent: true,
         opacity: 1.0
     });
+    vehicleGen: vehicleGenome;
 
     constructor(
-        lengthX: number,
-        lengthY: number,
-        lengthZ: number,
-        bodyMaterial: CANNON.Material | undefined,
+        vehicleGen: vehicleGenome,
+        physicalBodyMaterial: CANNON.Material | undefined,
+        scene: Scene | undefined,
         id: number
     ) {
         super();
+        this.vehicleGen = vehicleGen;
         this.id = id;
-        this.addCarAndMesh(lengthX, lengthY, lengthZ, bodyMaterial);
+        this.addBody(physicalBodyMaterial, scene);
+        this.addWheels(scene);
     }
 
     /**
      * Creates a vehicle body in CANNON according to the passed parameters and stores the fitting visual representation in this.visualBody.
-     * @param lengthX length of the car.
-     * @param lengthY width of the car.
-     * @param lengthZ height of the car.
-     * @param bodyMaterial defines the bodyMaterial. Needed to calculate collisions between this vehicle and track.
+     * @param scene which the wheels will be added to, if it exists.
      * @private
      */
-    private addCarAndMesh(
-        lengthX: number,
-        lengthY: number,
-        lengthZ: number,
-        bodyMaterial: CANNON.Material | undefined
-    ) {
-        //Add physical Body
-        var chassisShape = new CANNON.Box(new CANNON.Vec3(lengthX, lengthY, lengthZ));
+    private addWheels(scene: THREE.Scene | undefined) {
+        //Add wheels to the car.
+        for (var i = 0; i < this.vehicleGen.wheels.length; i++) {
 
+            this.addWheelWithMesh(
+                this.vehicleGen.wheels[i].radius,
+                this.vehicleGen.wheels[i].width,
+                this.vehicleGen.wheels[i].posX, //length - x
+                this.vehicleGen.wheels[i].posY, //height - y
+                this.vehicleGen.wheels[i].posZ, //width - z
+                this.vehicleGen.wheels[i].material,
+                scene
+            );
+        }
+    }
+
+    /**
+     * Creates the physical CANNON.Body and the corresponding visual representation in the THREE.scene.
+     * @param bodyMaterial of the vehicle body. If it is undefined no body will be created.
+     * @param scene the scene which renders the body. If it is undefined no THREE.Mesh will be created.
+     */
+    addBody(bodyMaterial: CANNON.Material | undefined, scene: Scene | undefined) {
+
+        if (bodyMaterial == undefined) {
+            return;
+        }
+        //Add physical Body
         let vertices: CANNON.Vec3[] = [
             new CANNON.Vec3(0, 0, 0),
             new CANNON.Vec3(1, 10, -5),
@@ -75,17 +92,13 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             vertices: vertices,
             faces: faces
         }
+
         let chassisShapeComplex = new CANNON.ConvexPolyhedron(polyoptions);
 
         //the bodyMass can't be lighter than 1 Kg
-        this.bodyMass = Math.max(lengthX * lengthY * lengthZ, 1);
+        this.bodyMass = 100;
         this.vehicleMass = this.vehicleMass + this.bodyMass;
-
-        var body = new CANNON.Body({mass: 100});
-
-        body.addShape(chassisShapeComplex)
-
-        var chassisBody = new CANNON.Body({
+        this.chassisBody = new CANNON.Body({
             mass: 100,
             position: new CANNON.Vec3(0, 10, 0), //cars spawn 5 meters in the air.
             material: bodyMaterial,
@@ -94,29 +107,68 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             shape: chassisShapeComplex
         });
 
-        this.chassisBody = chassisBody;
-
         //Add visual Body
-        var geometry = this.createThreeGeometry(vertices, faces); // double chasis shape
+        if (scene != undefined) {
+            let geometry = this.createThreeGeometry(vertices, faces); // double chasis shape
+            this.visualBody = new THREE.Mesh(geometry, this.bodyMaterial);
+            scene.add(this.visualBody);
+        }
 
-        this.visualBody = new THREE.Mesh(geometry, this.bodyMaterial);
     }
 
-    //Creates a wheel in CANNON according to the passed parameters as well as the fitting visual representation in Three
+    /**
+     * Creates a wheel with CANNON according to the passed parameters as well as the fitting visual representation in Three.
+     * @param radius of the wheel.
+     * @param width of the wheel.
+     * @param positionX of the wheel.
+     * @param positionY of the wheel.
+     * @param positionZ of the wheel.
+     * @param physicalWheelMaterial of the wheel. If the param is undefined no physical CANNON.Body will be created.
+     * @param scene the wheel is placed inside of. If the param is undefined no visual THREE.Mesh will be created.
+     */
     addWheelWithMesh(
         radius: number,
         width: number,
         positionX: number,
         positionY: number,
         positionZ: number,
-        scene: any,
-        wheelMaterial: CANNON.Material
+        physicalWheelMaterial: CANNON.Material | undefined,
+        scene: THREE.Scene | undefined
     ) {
+
+        //Add wheel physical body
+        if (physicalWheelMaterial != undefined) {
+            this.addPhysicalWheel(radius, width, positionX, positionY, positionZ, physicalWheelMaterial);
+        }
+
+        //Add wheel visual body
+        if (scene != undefined) {
+            this.addWheelMesh(radius, width, scene);
+        }
+    }
+
+    /**
+     * Adds a wheel according to the parameters.
+     * @param radius of the wheel.
+     * @param width of the wheel.
+     * @param positionX of the wheel.
+     * @param positionY of the wheel.
+     * @param positionZ of the wheel.
+     * @param physicalWheelMaterial of the wheel.
+     * @private
+     */
+    private addPhysicalWheel(radius: number,
+                             width: number,
+                             positionX: number,
+                             positionY: number,
+                             positionZ: number,
+                             physicalWheelMaterial: CANNON.Material) {
         const wheelVolume = Math.PI * width * (radius * radius);
         const wheelMass = Math.max(1, wheelVolume * 3);
+
         let wheelBody = new CANNON.Body({
             mass: wheelMass,
-            material: wheelMaterial,
+            material: physicalWheelMaterial,
             collisionFilterGroup: Groups.GROUP1,
             collisionFilterMask: Groups.GROUP2 | Groups.GROUP3
         });
@@ -140,24 +192,15 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             Math.max(5, Math.min(3 * this.bodyMass * wheelMass, 700)),
             this.wheelBodies.length - 1
         );
-        console.log('bodymass: ' + this.bodyMass);
-        console.log('wheelmass: ' + wheelMass);
-        console.log(2 * this.bodyMass * wheelMass);
-
-        //Add wheel visual body
-        this.addWheelMesh(radius, width, scene);
     }
 
     //Creates and adds the wheel mesh in Three according to the given parameters.
-    private addWheelMesh(radius: number, width: number, scene: any) {
+    private addWheelMesh(radius: number, width: number, scene: THREE.Scene) {
         var wheelVisual = new THREE.CylinderGeometry(radius, radius, width, 24, 1);
         wheelVisual.rotateZ(Math.PI / 2);
         wheelVisual.rotateY(Math.PI / 2);
         var mesh = new THREE.Mesh(wheelVisual, this.wheelMaterial);
-
-        if (scene !== null) {
-            scene.add(mesh);
-        }
+        scene.add(mesh);
         this.wheelMeshes.push(mesh);
     }
 

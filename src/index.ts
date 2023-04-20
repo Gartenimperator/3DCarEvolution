@@ -1,7 +1,8 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module';
 import {ExtendedWorld} from "./ExtendedWorld";
+import {Material} from "three";
 
 // Detects webgl
 /*
@@ -22,7 +23,6 @@ var fakeCamera: THREE.PerspectiveCamera;
 
 var controls: OrbitControls;
 var materialDynamic, materialStatic;
-var XPointer: any;
 
 // Physics variables
 
@@ -31,18 +31,13 @@ var worlds: ExtendedWorld[] = [];
 var inactiveWorlds: Map<number, ExtendedWorld> = new Map();
 var groundBodyContactMaterialOptions = {
     friction: 0.9,
-    restitution: 0.1,
+    restitution: 0.3,
     contactEquationRelaxation: 3,
     frictionEquationStiffness: 1e8
 };
-var groundWheelContactMaterialOptions = {
-    friction: 0.3,
-    restitution: 0,
-    frictionEquationStiffness: 1000
-};
 var worldOptions = {
     allowSleep: true,
-    quatNormalizeFast: true,
+    quatNormalizeFast: false,
     quatNormalizeSkip: 1
 };
 var gravity = -9.82;
@@ -83,7 +78,7 @@ function initGraphics() {
     camera.position.z = 0;
     camera.lookAt(new THREE.Vector3(0, 3, 0));
 
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer = new THREE.WebGLRenderer({antialias: true});
     renderer.setClearColor(0xbfd1e5);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth * 0.80, window.innerHeight * 0.80);
@@ -95,8 +90,8 @@ function initGraphics() {
     dirLight.position.set(10, 10, 5);
     scene.add(dirLight);
 
-    materialDynamic = new THREE.MeshPhongMaterial({ color: 0xfca400 });
-    materialStatic = new THREE.MeshPhongMaterial({ color: 0x999999 });
+    materialDynamic = new THREE.MeshPhongMaterial({color: 0xfca400});
+    materialStatic = new THREE.MeshPhongMaterial({color: 0x999999});
 
     if (container !== null) {
         container.innerHTML = '';
@@ -113,14 +108,6 @@ function initGraphics() {
         container.appendChild(renderer.domElement);
     }
 
-    var geometryX = new THREE.PlaneGeometry(40, 1, 1);
-    var materialX = new THREE.MeshBasicMaterial({
-        color: 0xff0000,
-        side: THREE.DoubleSide
-    });
-    XPointer = new THREE.Mesh(geometryX, materialX);
-    XPointer.rotation.x = Math.PI / 2;
-    scene.add(XPointer);
 }
 
 /**
@@ -133,7 +120,6 @@ function initWorlds() {
             worldOptions,
             gravity,
             groundBodyContactMaterialOptions,
-            groundWheelContactMaterialOptions,
             population,
             i
         );
@@ -146,6 +132,14 @@ function initWorlds() {
 
     //prepare world to render
     worlds[0].cameraFocus.add(camera);
+}
+
+/**
+ * https://stackoverflow.com/questions/37762961/three-js-proper-removing-object-from-scene-still-reserved-in-heap
+ * Clear the scene properly to prepare it for the next generation
+ */
+function clearGraphics() {
+    scene.delete();
 }
 
 /**
@@ -177,19 +171,36 @@ function updatePhysics() {
  */
 function render() {
 
-    camera.copy(fakeCamera);
-
-    requestAnimationFrame(render);
-
     if (activeWorlds.size > 0) {
+
+        camera.copy(fakeCamera);
+
+        requestAnimationFrame(render);
+
         updatePhysics();
+
+        renderer.render(scene, camera);
+        stats.update();
+
     } else {
-        //next steps in the generation
+        //set scene to loading
+
+        console.log("clearing graphics");
+        worlds.forEach(world => {
+            world.cleanUpCurrentGeneration().then(() => {
+                    camera.copy(fakeCamera);
+                    requestAnimationFrame(render);
+                    renderer.render(scene, camera);
+                    stats.update();
+                }
+            );
+            world.generateNextGeneration();
+        })
+
+        //clear scene
+
         //let render() run, allows the user to move around the map
     }
-
-    renderer.render(scene, camera);
-    stats.update();
 }
 
 /**
