@@ -387,7 +387,7 @@ export class ExtendedWorld extends World {
     }
 
     /**
-     * Removes the soon-to-be old Meshes of each vehicle.
+     * Removes the soon-to-be old THREE.Meshes of each vehicle.
      */
     async cleanUpCurrentGeneration() {
         this.populationManager.disabledCars.forEach(vehicle => {

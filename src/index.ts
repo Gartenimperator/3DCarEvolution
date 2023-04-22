@@ -135,14 +135,6 @@ function initWorlds() {
 }
 
 /**
- * https://stackoverflow.com/questions/37762961/three-js-proper-removing-object-from-scene-still-reserved-in-heap
- * Clear the scene properly to prepare it for the next generation
- */
-function clearGraphics() {
-    scene.delete();
-}
-
-/**
  * Main
  **/
 
@@ -189,17 +181,12 @@ function render() {
         worlds.forEach(world => {
             world.cleanUpCurrentGeneration().then(() => {
                     camera.copy(fakeCamera);
-                    requestAnimationFrame(render);
                     renderer.render(scene, camera);
                     stats.update();
                 }
             );
             world.generateNextGeneration();
         })
-
-        //clear scene
-
-        //let render() run, allows the user to move around the map
     }
 }
 
