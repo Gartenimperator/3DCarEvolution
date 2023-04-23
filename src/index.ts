@@ -16,7 +16,9 @@ var stats: any;
 
 // Graphics variables
 var container: HTMLElement | null;
-var camera: THREE.PerspectiveCamera, scene: any, renderer: any;
+var camera: THREE.PerspectiveCamera, renderer: any;
+
+let scene = new THREE.Scene();
 
 // for more Info on the fakeCamera: https://stackoverflow.com/questions/53292145/forcing-orbitcontrols-to-navigate-around-a-moving-object-almost-working/53298655#53298655
 var fakeCamera: THREE.PerspectiveCamera;
@@ -65,12 +67,77 @@ var trackPieceLengthX = 5;
 var population: number = 50;
 var amountOfWorlds: number = 1;
 
+var mutationRate = 0.01;
+
 var timeOut: number = 360;
 
+/**
+ * Controller variables
+ */
+
+let startNextGen = false;
+let simulateThisGeneration = true;
+
+/**
+ * Input listeners
+ */
+
+function startSimulation() {
+
+    startNextGen = false;
+    simulateThisGeneration = true;
+    document.getElementById ("stopBtn").disabled = false;
+    document.getElementById ("continueBtn").disabled = true;
+    document.getElementById ("nextGenerationBtn").disabled = true;
+
+    initGraphics();
+    initWorlds();
+}
+
+function startNextGeneration() {
+    startNextGen = true;
+    document.getElementById ("stopBtn").disabled = true;
+    document.getElementById ("continueBtn").disabled = true;
+    document.getElementById ("nextGenerationBtn").disabled = true;
+}
+
+function stopSimulation() {
+    simulateThisGeneration = false;
+    document.getElementById ("stopBtn").disabled = true;
+    document.getElementById ("continueBtn").disabled = false;
+    document.getElementById ("nextGenerationBtn").disabled = false;
+}
+
+function continueSimulation() {
+    simulateThisGeneration = true;
+    document.getElementById ("stopBtn").disabled = false;
+    document.getElementById ("continueBtn").disabled = true;
+    document.getElementById ("nextGenerationBtn").disabled = true;
+}
+
+document.getElementById ("nextGenerationBtn").addEventListener ("click", startNextGeneration);
+
+document.getElementById ("stopBtn").addEventListener ("click", stopSimulation);
+
+document.getElementById ("continueBtn").addEventListener ("click", continueSimulation);
+
+document.getElementById ("startSimulationBtn").addEventListener ("click", startSimulation);
+document.getElementById ("stopBtn").disabled = false;
+document.getElementById ("continueBtn").disabled = true;
+document.getElementById ("nextGenerationBtn").disabled = true;
+
+
+
+
+/**
+ * Init Functions
+ */
+
 function initGraphics() {
-    container = document.getElementById('simulationWindow');
 
     scene = new THREE.Scene();
+
+    container = document.getElementById('simulationWindow');
 
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 500);
     camera.position.x = -40;
@@ -114,6 +181,7 @@ function initGraphics() {
  * Initializes the worlds at the start of the genetic algorithm
  */
 function initWorlds() {
+    removeOldWorlds();
     for (var i = 0; i < amountOfWorlds; i++) {
         var world = new ExtendedWorld(
             scene,
@@ -132,6 +200,25 @@ function initWorlds() {
 
     //prepare world to render
     worlds[0].cameraFocus.add(camera);
+}
+
+/**
+ * Clean Up
+ */
+
+function removeOldWorlds() {
+    //Clean up worlds.
+    worlds.forEach(world => {
+        //Call these functions again to update the scene, which will then display nothing.
+        world.cleanUpCurrentGeneration(true);
+    });
+
+    while (worlds.length) {
+        worlds.pop();
+    }
+
+    activeWorlds.clear();
+    inactiveWorlds.clear();
 }
 
 /**
@@ -154,6 +241,12 @@ function updatePhysics() {
             console.log('Disabling world with id: ' + world.id);
             inactiveWorlds.set(world.id, world);
             activeWorlds.delete(world.id);
+
+            if (activeWorlds.size === 0) {
+                document.getElementById ("stopBtn").disabled = true;
+                document.getElementById ("continueBtn").disabled = true;
+                document.getElementById ("nextGenerationBtn").disabled = false;
+            }
         }
     });
 }
@@ -162,31 +255,41 @@ function updatePhysics() {
  * Looping function which syncs the Three.scene and ExtendendWorld after each calculation step.
  */
 function render() {
-
-    if (activeWorlds.size > 0) {
+    if (activeWorlds.size > 0 && simulateThisGeneration) {
 
         camera.copy(fakeCamera);
-
         requestAnimationFrame(render);
 
         updatePhysics();
 
         renderer.render(scene, camera);
         stats.update();
-
     } else {
         //set scene to loading
 
-        console.log("clearing graphics");
-        worlds.forEach(world => {
-            world.cleanUpCurrentGeneration().then(() => {
-                    camera.copy(fakeCamera);
-                    renderer.render(scene, camera);
-                    stats.update();
-                }
-            );
-            world.generateNextGeneration();
-        })
+        if (startNextGen) {
+            startNextGen = false;
+
+            worlds.forEach(world => {
+                world.cleanUpCurrentGeneration(false);
+
+                //Call these functions again to update the scene, which will then display nothing.
+                updatePhysics();
+                renderer.render(scene, camera);
+                stats.update();
+
+                world.generateNextGeneration();
+            })
+            requestAnimationFrame(render);
+        } else {
+
+            //The user can still move the camera around even if the cars are all disabled.
+            camera.copy(fakeCamera);
+            requestAnimationFrame(render);
+
+            renderer.render(scene, camera);
+            stats.update();
+        }
     }
 }
 
@@ -194,8 +297,6 @@ function render() {
  * main
  */
 
-
 initGraphics();
 initWorlds();
-
 render();

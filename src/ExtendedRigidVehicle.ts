@@ -100,7 +100,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         this.vehicleMass = this.vehicleMass + this.bodyMass;
         this.chassisBody = new CANNON.Body({
             mass: 100,
-            position: new CANNON.Vec3(0, 10, 0), //cars spawn 5 meters in the air.
+            position: new CANNON.Vec3(0, 10, 0), //cars spawn 10 meters in the air.
             material: bodyMaterial,
             collisionFilterGroup: Groups.GROUP1,
             collisionFilterMask: Groups.GROUP2 | Groups.GROUP3,
@@ -289,5 +289,26 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         geometry.setAttribute('position', new THREE.BufferAttribute(floatVertices, 3));
 
         return geometry;
+    }
+
+    /**
+     * Returns the vehicle genome as an Array for the crossover and mutation process.
+     */
+    toArray() : number[] {
+        let genAsArray: number[] = [];
+        genAsArray.push(this.vehicleGen.baseWeight);
+        genAsArray.push(this.vehicleGen.length);
+        genAsArray.push(this.vehicleGen.height);
+        genAsArray.push(this.vehicleGen.width);
+        this.vehicleGen.wheels.forEach(wheel => {
+            genAsArray.push(wheel.radius);
+            genAsArray.push(wheel.width);
+            genAsArray.push(wheel.posX);
+            genAsArray.push(wheel.posY);
+            genAsArray.push(wheel.posZ);
+            //TODO Material problem
+        })
+
+        return genAsArray;
     }
 }

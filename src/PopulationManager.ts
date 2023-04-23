@@ -1,4 +1,5 @@
 import {ExtendedRigidVehicle} from "./ExtendedRigidVehicle";
+import {vehicleGenome} from "./ExtendedWorld";
 
 /**
  * Track a Population of vehicles and their status inside their world.
@@ -45,8 +46,17 @@ export class PopulationManager {
         return true;
     }
 
+    createNextGeneration() {
+        this.disabledCars.forEach(car => {
+        });
+    }
+
     mutate() {}
 
-    crossOver() {}
+    crossOver(parent1: vehicleGenome, parent2: vehicleGenome) {
+        let childA: vehicleGenome;
+        let childB: vehicleGenome;
 
+
+    }
 }

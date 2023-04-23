@@ -32,6 +32,10 @@ export type wheel = {
     posZ: number,
 }
 
+/**
+ * Type which uniquely describes a vehicle also referred to as the genome of a vehicle. Vehicles with the same genome
+ * are perfect copies of each other.
+ */
 export type vehicleGenome = {
     baseWeight: number,
     length: number,
@@ -75,6 +79,8 @@ export class ExtendedWorld extends World {
         this.id = id;
         this.populationManager = new PopulationManager(populationSize);
         this.scene = scene;
+
+        this.broadphase = new CANNON.SAPBroadphase(this);
         this.gravity.set(0, gravity, 0);
 
         this.scene.add(this.cameraFocus);
@@ -105,7 +111,6 @@ export class ExtendedWorld extends World {
      * @param vehicleGenome which details the vehicle.
      */
     addCar(vehicleGenome: vehicleGenome) {
-        console.log(vehicleGenome);
         const vehicle = new ExtendedRigidVehicle(
             vehicleGenome,
             this.bodyMaterial,
@@ -130,7 +135,7 @@ export class ExtendedWorld extends World {
         if (this.render) {
 
             //Update leading car.
-            if (this.populationManager.disabledCars.has(this.populationManager.leadingCar.id) ) {
+            if (this.populationManager.disabledCars.has(this.populationManager.leadingCar.id)) {
                 if (this.populationManager.activeCars.size > 0) {
                     this.populationManager.leadingCar.chassisBody.position.set(-1, 0, 0);
                 } else {
@@ -203,15 +208,6 @@ export class ExtendedWorld extends World {
     removeVehicle(vehicle: ExtendedRigidVehicle) {
         if (this.populationManager.disableCar(vehicle)) {
             vehicle.removeFromWorld(this);
-            console.log(
-                'Disabling vehicle ' +
-                vehicle.id +
-                ' from world ' +
-                this.id +
-                '. It traveled ' +
-                vehicle.furthestPosition.x +
-                ' meters.'
-            );
         }
     }
 
@@ -220,7 +216,6 @@ export class ExtendedWorld extends World {
      * @param bodyGroundOptions options detailing the body-ground contact.
      */
     initCarGroundContact(bodyGroundOptions: any) {
-        this.broadphase = new CANNON.SAPBroadphase(this);
         this.defaultContactMaterial.friction = 1;
 
         var wheelGroundOptions = {
@@ -303,14 +298,14 @@ export class ExtendedWorld extends World {
 
         var rotateParallelToZAxis: CANNON.Quaternion;
 
-        var trackPieceShape = new CANNON.Box(new CANNON.Vec3(length, 0.1, 50));
+        var trackPieceShape = new CANNON.Box(new CANNON.Vec3(length, 1, 50));
         var lowestTrackPoint: number = 0;
 
         //The Track always starts on a 10m * 50m plane to allow the cars to spawn correctly
         var trackBody = new CANNON.Body({
             mass: 0, // mass = 0 makes the body static
             material: this.groundMaterial,
-            shape: new CANNON.Box(new CANNON.Vec3(10, 0.1, 50)),
+            shape: new CANNON.Box(new CANNON.Vec3(10, 1, 50)),
             collisionFilterGroup: Groups.GROUP2,
             collisionFilterMask: Groups.GROUP1
         });
@@ -383,20 +378,42 @@ export class ExtendedWorld extends World {
      *
      */
     generateNextGeneration() {
-        this.populationManager;
+        this.populationManager.createNextGeneration();
     }
 
     /**
      * Removes the soon-to-be old THREE.Meshes of each vehicle.
      */
-    async cleanUpCurrentGeneration() {
+    cleanUpCurrentGeneration(removeTrack: boolean) {
+
+        //Disable all cars first in case the simulation was prematurely stopped.
+        this.populationManager.activeCars.forEach(vehicle => {
+            this.removeVehicle(vehicle);
+        })
+
         this.populationManager.disabledCars.forEach(vehicle => {
             vehicle.wheelMeshes.forEach(wheelMesh => {
                 this.removeObjectFromScene(wheelMesh);
             })
 
             this.removeObjectFromScene(vehicle.visualBody);
+            this.removeObjectFromScene(vehicle.wheelMaterial);
+            this.removeObjectFromScene(vehicle.bodyMaterial);
         })
+
+        if (removeTrack) {
+            this.removeTrack();
+        }
+    }
+
+    /**
+     * Removes the physical and visual bodies of the track.
+     */
+    removeTrack() {
+        while (this.track.trackPieces.length) {
+            this.removeBody(this.track.trackPieces.pop());
+            this.removeObjectFromScene(this.track.threeJSTrackPieces.pop());
+        }
     }
 
     /**
@@ -464,4 +481,6 @@ export class ExtendedWorld extends World {
     roundToFour(num: number) {
         return +(Math.round(num * 10000) / 10000);
     }
+
+
 }
