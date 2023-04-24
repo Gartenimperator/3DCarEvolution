@@ -5,6 +5,7 @@ import {ExtendedRigidVehicle} from "./ExtendedRigidVehicle";
 import {PopulationManager} from "./PopulationManager";
 import {Groups} from "./Groups";
 import {Mesh, Object3D, Scene} from "three";
+import * as THREE from "three";
 
 type Track = {
     /**
@@ -21,6 +22,11 @@ type Track = {
      * The lowest point of the track.
      */
     negativeYBorder: number;
+
+    /**
+     * Describes the track width.
+     */
+    trackWidth: number;
 }
 
 export type wheel = {
@@ -30,6 +36,7 @@ export type wheel = {
     posX: number,
     posY: number,
     posZ: number,
+    canSteer: boolean,
 }
 
 /**
@@ -62,7 +69,8 @@ export class ExtendedWorld extends World {
     track: Track = {
         trackPieces: [],
         negativeYBorder: 0,
-        threeJSTrackPieces: []
+        threeJSTrackPieces: [],
+        trackWidth: 0,
     };
     render: boolean = true;
     disabled: boolean = false;
@@ -147,6 +155,7 @@ export class ExtendedWorld extends World {
             //Update position of cars inside the scene.
             this.populationManager.activeCars.forEach((car) => {
                 this.advanceTimeout(car, timeOut);
+                car.updateSteering(this.track.trackWidth);
                 this.updateScene(car);
             });
 
@@ -159,6 +168,7 @@ export class ExtendedWorld extends World {
             //Update only the cars physical body.
             this.populationManager.activeCars.forEach((car) => {
                 this.advanceTimeout(car, timeOut);
+                car.updateSteering(this.track.trackWidth);
             });
 
         }
@@ -288,8 +298,9 @@ export class ExtendedWorld extends World {
      * also simplifies the track to a 2-dimensional plane. The gradients have to be between -90 and 90 degrees.
      * @param gradients which detail the track.
      * @param length of each track piece.
+     * @param trackTexture defines the visual representation of the track.
      */
-    initTrackWithGradients(gradients: number[], length: number) {
+    initTrackWithGradients(gradients: number[], length: number, trackTexture: THREE.MeshStandardMaterial) {
 
         //Remove the existing track
         this.track.trackPieces.forEach((trackPiece) => {
@@ -301,8 +312,10 @@ export class ExtendedWorld extends World {
         var trackPieceShape = new CANNON.Box(new CANNON.Vec3(length, 1, 50));
         var lowestTrackPoint: number = 0;
 
+        this.track.trackWidth = 50;
+
         //The Track always starts on a 10m * 50m plane to allow the cars to spawn correctly
-        var trackBody = new CANNON.Body({
+        let trackStart = new CANNON.Body({
             mass: 0, // mass = 0 makes the body static
             material: this.groundMaterial,
             shape: new CANNON.Box(new CANNON.Vec3(10, 1, 50)),
@@ -310,11 +323,19 @@ export class ExtendedWorld extends World {
             collisionFilterMask: Groups.GROUP1
         });
 
-        this.addBody(trackBody);
-        this.track.trackPieces.push(trackBody);
+        this.addBody(trackStart);
+        this.track.trackPieces.push(trackStart);
+
+        var geometry = new THREE.BoxGeometry(10 * 2, 1 * 2, 50 * 2); // double chasis shape
+        let trackStartVisual = new THREE.Mesh(geometry, trackTexture);
+
+        this.copyPosition(trackStart, trackStartVisual);
+
+        this.track.threeJSTrackPieces.push(trackStartVisual);
+        this.scene.add(trackStartVisual);
 
         //the always track starts 10 Meters in front of the cars
-        var currentPosition: CANNON.Vec3 = new CANNON.Vec3(10, 0, 0);
+        let currentPosition: CANNON.Vec3 = new CANNON.Vec3(10, 0, 0);
 
         //Construct the track by placing the track pieces at the correct positions according to the gradients
         gradients.forEach((gradient) => {
@@ -339,7 +360,7 @@ export class ExtendedWorld extends World {
             currentPosition.x = currentPosition.x + xDist;
             currentPosition.y = currentPosition.y + yDist;
 
-            var box = new CANNON.Body({
+            var trackPiece = new CANNON.Body({
                 mass: 0,
                 position: currentPosition,
                 collisionFilterGroup: Groups.GROUP3,
@@ -360,11 +381,34 @@ export class ExtendedWorld extends World {
                 0,
                 (gradient * 2 * Math.PI) / 360
             );
-            box.addShape(trackPieceShape, new CANNON.Vec3(), rotateParallelToZAxis);
-            this.addBody(box);
-            this.track.trackPieces.push(box);
+
+            trackPiece.addShape(trackPieceShape, new CANNON.Vec3(), rotateParallelToZAxis);
+            this.addBody(trackPiece);
+            this.track.trackPieces.push(trackPiece);
+
+            //Add visual Body
+            if (this.render) {
+
+                var geometry = new THREE.BoxGeometry(length * 2, 1 * 2, 50 * 2); // double chasis shape
+                let trackVisual = new THREE.Mesh(geometry, trackTexture);
+
+                const posBody = trackPiece.position;
+                trackVisual.position.set(posBody.x, posBody.y, posBody.z);
+                trackVisual.rotateZ((gradient * 2 * Math.PI) / 360);
+
+                this.track.threeJSTrackPieces.push(trackVisual);
+                this.scene.add(trackVisual);
+            }
+
         });
         this.track.negativeYBorder = lowestTrackPoint - 10;
+    }
+
+    copyPosition(cannonBody: CANNON.Body, threeMesh: THREE.Mesh) {
+        const posBody = cannonBody.position;
+        const quatBody = cannonBody.quaternion;
+        threeMesh.position.set(posBody.x, posBody.y, posBody.z);
+        threeMesh.quaternion.set(quatBody.x, quatBody.y, quatBody.z, quatBody.w);
     }
 
     /**
@@ -450,12 +494,12 @@ export class ExtendedWorld extends World {
         var vehicle: vehicleGenome = {
             baseWeight: (this.roundToFour(Math.random() * 50)), //base weigth - influences the cars calculated weight and its engine power
             length: (this.roundToFour(Math.random() * 7)),
-            height: (this.roundToFour(Math.random() * 2)),
-            width: (this.roundToFour(Math.random() * 5)),
+            height: (this.roundToFour(Math.random() * 6)),
+            width: (this.roundToFour(Math.random() * 6)),
             wheels: []
         };
 
-        var wheelAmount = Math.floor(Math.random() * 5);
+        var wheelAmount = Math.floor(Math.random() * 6);
 
         //TODO How to handle 'incorrect' wheels
         // fe wheels that would spawn too far away from the car
@@ -470,7 +514,9 @@ export class ExtendedWorld extends World {
                 posZ: (this.roundToFour(-vehicle.width + vehicle.width * Math.random() * 2)), //wheel position width
 
                 material: this.wheelMaterialMediumFriction,
+                canSteer: Math.floor(Math.random() * 2) === 1,
             };
+            console.log(wheel.canSteer);
             vehicle.wheels.push(wheel);
         }
 

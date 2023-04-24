@@ -17,12 +17,12 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     bodyMass: number = 0;
     vehicleMass: number = 0;
     id: number;
-    wheelMaterial = new THREE.MeshBasicMaterial({
-        color: 0x2A292B,
+    wheelMaterial = new THREE.MeshLambertMaterial({
+        color: 0x395730,
         transparent: true,
         opacity: 1.0
     });
-    bodyMaterial = new THREE.MeshBasicMaterial({
+    bodyMaterial = new THREE.MeshPhongMaterial({
         color: 'red',
         transparent: true,
         opacity: 1.0
@@ -58,6 +58,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                 this.vehicleGen.wheels[i].posY, //height - y
                 this.vehicleGen.wheels[i].posZ, //width - z
                 this.vehicleGen.wheels[i].material,
+                this.vehicleGen.wheels[i].canSteer,
                 scene
             );
         }
@@ -74,42 +75,28 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             return;
         }
         //Add physical Body
-        let vertices: CANNON.Vec3[] = [
-            new CANNON.Vec3(0, 0, 0),
-            new CANNON.Vec3(1, 10, -5),
-            new CANNON.Vec3(5, 0, 5),
-            new CANNON.Vec3(-5, 0, 0)
-        ];
+        var chassisShape = new CANNON.Box(new CANNON.Vec3(this.vehicleGen.length, this.vehicleGen.height, this.vehicleGen.width));
 
-        let faces = [
-            [0, 3, 1],
-            [0, 1, 2],
-            [0, 2, 3],
-            [2, 1, 3]
-        ]
+        //the bodyMass can't be lighter than 10 Kg
+        this.bodyMass = Math.max(this.vehicleGen.length * this.vehicleGen.height * this.vehicleGen.width, 10);
 
-        let polyoptions = {
-            vertices: vertices,
-            faces: faces
-        }
-
-        let chassisShapeComplex = new CANNON.ConvexPolyhedron(polyoptions);
-
-        //the bodyMass can't be lighter than 1 Kg
-        this.bodyMass = 100;
         this.vehicleMass = this.vehicleMass + this.bodyMass;
-        this.chassisBody = new CANNON.Body({
-            mass: 100,
+
+        var chassisBody = new CANNON.Body({
+            mass: this.bodyMass,
             position: new CANNON.Vec3(0, 10, 0), //cars spawn 10 meters in the air.
             material: bodyMaterial,
             collisionFilterGroup: Groups.GROUP1,
-            collisionFilterMask: Groups.GROUP2 | Groups.GROUP3,
-            shape: chassisShapeComplex
+            collisionFilterMask: Groups.GROUP2 | Groups.GROUP3
         });
+        chassisBody.addShape(chassisShape);
+        this.chassisBody = chassisBody;
+
+        //Add visual Body
+        var geometry = new THREE.BoxGeometry(this.vehicleGen.length * 2, this.vehicleGen.height * 2, this.vehicleGen.width * 2); // double chasis shape
 
         //Add visual Body
         if (scene != undefined) {
-            let geometry = this.createThreeGeometry(vertices, faces); // double chasis shape
             this.visualBody = new THREE.Mesh(geometry, this.bodyMaterial);
             scene.add(this.visualBody);
         }
@@ -124,6 +111,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param positionY of the wheel.
      * @param positionZ of the wheel.
      * @param physicalWheelMaterial of the wheel. If the param is undefined no physical CANNON.Body will be created.
+     * @param canSteer defines if the wheel is steerable or not.
      * @param scene the wheel is placed inside of. If the param is undefined no visual THREE.Mesh will be created.
      */
     addWheelWithMesh(
@@ -133,12 +121,13 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         positionY: number,
         positionZ: number,
         physicalWheelMaterial: CANNON.Material | undefined,
+        canSteer: boolean,
         scene: THREE.Scene | undefined
     ) {
 
         //Add wheel physical body
         if (physicalWheelMaterial != undefined) {
-            this.addPhysicalWheel(radius, width, positionX, positionY, positionZ, physicalWheelMaterial);
+            this.addPhysicalWheel(radius, width, positionX, positionY, positionZ, physicalWheelMaterial, canSteer);
         }
 
         //Add wheel visual body
@@ -155,6 +144,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param positionY of the wheel.
      * @param positionZ of the wheel.
      * @param physicalWheelMaterial of the wheel.
+     * @param canSteer defines if the wheel is steerable or not.
      * @private
      */
     private addPhysicalWheel(radius: number,
@@ -162,7 +152,8 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                              positionX: number,
                              positionY: number,
                              positionZ: number,
-                             physicalWheelMaterial: CANNON.Material) {
+                             physicalWheelMaterial: CANNON.Material,
+                             canSteer: boolean) {
         const wheelVolume = Math.PI * width * (radius * radius);
         const wheelMass = Math.max(1, wheelVolume * 3);
 
@@ -188,14 +179,25 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         this.vehicleMass = this.vehicleMass + wheelMass;
 
+        let wheelForce = Math.max(5, Math.min(this.bodyMass * wheelMass, 1000));
+
+        if (canSteer) {
+            wheelForce = wheelForce * 2 / 3; //Steerable wheels get a small punishment by power reduction.
+        }
+
         this.setWheelForce(
-            Math.max(5, Math.min(3 * this.bodyMass * wheelMass, 700)),
+            Math.max(5, Math.min(this.bodyMass * wheelMass, 1000)),
             this.wheelBodies.length - 1
         );
     }
 
-    //Creates and adds the wheel mesh in Three according to the given parameters.
-    private addWheelMesh(radius: number, width: number, scene: THREE.Scene) {
+    /**
+     * Helper method for adding wheels. Creates and adds the wheelMesh according to the given parameters.
+     * @param radius of the wheel.
+     * @param width of the wheel.
+     * @param scene the wheel is added to.
+     */
+    addWheelMesh(radius: number, width: number, scene: THREE.Scene) {
         var wheelVisual = new THREE.CylinderGeometry(radius, radius, width, 24, 1);
         wheelVisual.rotateZ(Math.PI / 2);
         wheelVisual.rotateY(Math.PI / 2);
@@ -240,12 +242,12 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      */
     disable() {
         if (this.visualBody.material instanceof Material) {
-            this.visualBody.material.opacity = 0.5;
+            this.visualBody.material.opacity = 0.4;
         }
 
         this.wheelMeshes.forEach(wheel => {
             if (wheel.material instanceof Material) {
-                wheel.material.opacity = 0.5;
+                wheel.material.opacity = 0.4;
             }
         });
     }
@@ -310,5 +312,22 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         })
 
         return genAsArray;
+    }
+
+    /**
+     * Update the steering angle of each wheel.
+     * @param trackWidth width of the track the vehicle is currently driving on.
+     */
+    updateSteering(trackWidth: number) {
+        this.vehicleGen.wheels.forEach((wheel, i) => {
+            let positionZ = this.chassisBody.position.z;
+            if (wheel.canSteer && (positionZ < -trackWidth / 10 || positionZ > trackWidth / 10)) {
+
+                let steeringValue = Math.max(-0.6, Math.min(0.6, positionZ / trackWidth));
+                this.setSteeringValue(steeringValue, i);
+            } else {
+                this.setSteeringValue(0, i);
+            }
+        })
     }
 }

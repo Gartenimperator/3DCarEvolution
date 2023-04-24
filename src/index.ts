@@ -42,7 +42,7 @@ var worldOptions = {
     quatNormalizeFast: false,
     quatNormalizeSkip: 1
 };
-var gravity = -9.82;
+var gravity = -24;
 const frameTime: number = 1 / 60;
 const fastForwardFrameTime: number = 1 / 20;
 const delta: number = 1; //???
@@ -56,12 +56,13 @@ var steps: number[] = [
 var nowWorking: number[] = [0, 10, 0, 0, 45, -45, -90, 180, -90, 0, 0, 0, 0, -110, -45, 0, -30, -20, 0, 10, 10];
 var jump: number[] = [0, -10, 0, 10, 20, -90, -90, -90, 0, 70, 80, 90, -10, 0, 0, 90];
 var simpleTrack: number[] = [
-    0, 15, 34, 30, 30, 20, 10, -30, -30, -30, -20, -10, 0, 10, 20, -90, 0, 80, -10, -10, -20, 0, 30,
-    20, 10, 0
-];
+    0, 15, 10, 0, 10, 0, 10, -30, -30, -30, -20, -10, 0, 10, 20, -90, 0, 80, -10, -10, -20, 0, 30,
+    20, 10, 0];
 
 var trackGradients: number[] = simpleTrack;
 var trackPieceLengthX = 5;
+const textureLoader = new THREE.TextureLoader();
+let trackTexture: THREE.MeshStandardMaterial;
 
 //Generic-Algorithm global variables
 var population: number = 50;
@@ -150,11 +151,11 @@ function initGraphics() {
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth * 0.80, window.innerHeight * 0.80);
 
-    var ambientLight = new THREE.AmbientLight(0x404040);
+    var ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
-    var dirLight = new THREE.DirectionalLight(0xffffff, 1);
-    dirLight.position.set(10, 10, 5);
+    var dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    dirLight.position.set(20, 20, 5);
     scene.add(dirLight);
 
     materialDynamic = new THREE.MeshPhongMaterial({color: 0xfca400});
@@ -175,6 +176,16 @@ function initGraphics() {
         container.appendChild(renderer.domElement);
     }
 
+    const trackAsphaltTexture = textureLoader.load('./src/static/cardboard-texture.jpg');
+    trackAsphaltTexture.wrapS = THREE.RepeatWrapping;
+    trackAsphaltTexture.wrapT = THREE.RepeatWrapping;
+    trackAsphaltTexture.repeat = new THREE.Vector2(5,5);
+    console.log(trackAsphaltTexture);
+    trackTexture = new THREE.MeshStandardMaterial(
+        {
+            map: trackAsphaltTexture
+        }
+    )
 }
 
 /**
@@ -193,7 +204,7 @@ function initWorlds() {
         );
 
         //world.initTrackWithHeightfield(matrix);
-        world.initTrackWithGradients(trackGradients, trackPieceLengthX);
+        world.initTrackWithGradients(trackGradients, trackPieceLengthX, trackTexture);
         activeWorlds.set(world.id, world);
         worlds.push(world);
     }
