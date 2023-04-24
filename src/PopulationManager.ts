@@ -1,6 +1,16 @@
 import {ExtendedRigidVehicle} from "./ExtendedRigidVehicle";
 import {vehicleGenome} from "./ExtendedWorld";
 
+type fitnessData = {
+    id: number,
+    vehicleGen: vehicleGenome,
+    distanceTraveled: number,
+    hasFinished: boolean,
+    timeInSteps: number,
+    fitness: number,
+}
+
+
 /**
  * Track a Population of vehicles and their status inside their world.
  */
@@ -8,6 +18,7 @@ export class PopulationManager {
     leadingCar: ExtendedRigidVehicle;
     activeCars: Map<number, ExtendedRigidVehicle> = new Map();
     disabledCars: Map<number, ExtendedRigidVehicle> = new Map();
+    fitnessData: fitnessData[] = [];
     populationSize: number = 0;
 
     constructor(populationSize: number) {
@@ -34,10 +45,23 @@ export class PopulationManager {
     /**
      * Disable the given vehicle and lower the populationSize
      * @param car to disable.
+     * @param stepNumber at which the car is disabled.
      */
-    disableCar(car: ExtendedRigidVehicle): boolean {
+    disableCar(car: ExtendedRigidVehicle, stepNumber: number): boolean {
         if (this.activeCars.delete(car.id)) {
             car.disable();
+            this.fitnessData.push(
+                {
+                    id: car.id,
+                    vehicleGen: car.vehicleGen,
+                    distanceTraveled: car.furthestPosition.x,
+                    hasFinished: car.hasFinished,
+                    timeInSteps: stepNumber,
+                    fitness: this.calculateFitness(stepNumber, car.hasFinished, car.furthestPosition.x),
+                }
+            )
+
+            //save disabled cars to dispose of the Cannon and Three objects correctly at the end of the simulation.
             this.disabledCars.set(car.id, car);
         } else {
             console.log("Tried to remove a car which isn't part of the population");
@@ -46,9 +70,9 @@ export class PopulationManager {
         return true;
     }
 
-    createNextGeneration() {
-        this.disabledCars.forEach(car => {
-        });
+    createNextGeneration(): vehicleGenome[] {
+        this.fitnessData.sort((a,b) => a.fitness - b.fitness);
+        return this.fitnessData.map((fitnessData, index) => fitnessData.vehicleGen);
     }
 
     mutate() {}
@@ -56,7 +80,16 @@ export class PopulationManager {
     crossOver(parent1: vehicleGenome, parent2: vehicleGenome) {
         let childA: vehicleGenome;
         let childB: vehicleGenome;
+    }
 
-
+    /**
+     * Calculates the fitness value according to the fitness function and the passed parameters.
+     * @param stepNumber is the time in steps.
+     * @param hasFinished declares if a vehicle has finished.
+     * @param distance the vehicle has traveled.
+     * @private
+     */
+    private calculateFitness(stepNumber: number, hasFinished: boolean, distance: number): number {
+        return distance;
     }
 }

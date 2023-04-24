@@ -18,7 +18,12 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     vehicleMass: number = 0;
     id: number;
     wheelMaterial = new THREE.MeshLambertMaterial({
-        color: 0x395730,
+        color: 0x191919,
+        transparent: true,
+        opacity: 1.0
+    });
+    wheelHoodMaterial = new THREE.MeshPhongMaterial({
+        color: 0xC0C0C0,
         transparent: true,
         opacity: 1.0
     });
@@ -28,6 +33,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         opacity: 1.0
     });
     vehicleGen: vehicleGenome;
+    hasFinished: boolean = false;
 
     constructor(
         vehicleGen: vehicleGenome,
@@ -169,7 +175,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         const rotateParallelToXAxis = new CANNON.Quaternion().setFromEuler(Math.PI / 2, 0, 0);
         const shape = new CANNON.Cylinder(radius, radius, width, 25);
         wheelBody.addShape(shape, new CANNON.Vec3(), rotateParallelToXAxis);
-        wheelBody.angularDamping = 0.5;
+        wheelBody.angularDamping = 0.6;
 
         this.addWheel({
             body: wheelBody,
@@ -198,22 +204,28 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param scene the wheel is added to.
      */
     addWheelMesh(radius: number, width: number, scene: THREE.Scene) {
-        var wheelVisual = new THREE.CylinderGeometry(radius, radius, width, 24, 1);
+        let wheelVisual = new THREE.CylinderGeometry(radius, radius, width, 26, 1);
+        let wheelHood = new THREE.CylinderGeometry(radius * 0.8, radius * 0.8, width * 1.1, 26, 1);
         wheelVisual.rotateZ(Math.PI / 2);
+        wheelHood.rotateZ(Math.PI / 2);
         wheelVisual.rotateY(Math.PI / 2);
-        var mesh = new THREE.Mesh(wheelVisual, this.wheelMaterial);
-        scene.add(mesh);
-        this.wheelMeshes.push(mesh);
+        wheelHood.rotateY(Math.PI / 2);
+        var wheelMesh = new THREE.Mesh(wheelVisual, this.wheelMaterial);
+        wheelMesh.add(new THREE.Mesh(wheelHood, this.wheelHoodMaterial));
+        wheelMesh.add(new THREE.Mesh(new THREE.BoxGeometry(radius * 0.6, radius * 0.2, width * 1.2), this.wheelMaterial));
+        scene.add(wheelMesh);
+        this.wheelMeshes.push(wheelMesh);
     }
 
     /**
-     * Updates the timeout of a car during the simulation and decides whever it should get timed-out.
+     * Updates the timeout of a car during the simulation and decides whever it should get disabled. This might be due
+     * to falling off the track, finishing or simply being to slow.
      *
-     * @param timeOut the max amout of timeOut a car can have.
+     * @param timeOut the max amount of timeOut a car can have.
      * @param yBorder describes the lowest point of the track.
-     * @return true if and only if the car should be timedout.
+     * @return true if and only if the car should be disabled.
      */
-    advanceTimeoutAndCheckIfDisabled(timeOut: number, yBorder: number): boolean {
+    advanceTimeoutAndPosition(timeOut: number, yBorder: number, finishLine: number): boolean {
 
         const posBody = this.chassisBody.position;
 
@@ -231,9 +243,14 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         if (this.furthestPosition.x < posBody.x) {
             this.furthestPosition.set(posBody.x, posBody.y, posBody.z);
+            if (this.furthestPosition.x >= finishLine) {
+                this.hasFinished = true;
+                //Return true if this car has fallen finished and should be disabled
+                return true;
+            }
         }
 
-        //Return true if this car has fallen off the track.
+        //Return true if this car has fallen off the track and should be disabled
         return posBody.y <= yBorder;
     }
 

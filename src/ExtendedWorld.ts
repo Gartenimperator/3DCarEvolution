@@ -19,6 +19,11 @@ type Track = {
     threeJSTrackPieces: Mesh[];
 
     /**
+     * The position of the finish.
+     */
+    finishPosition: CANNON.Vec3;
+
+    /**
      * The lowest point of the track.
      */
     negativeYBorder: number;
@@ -71,6 +76,7 @@ export class ExtendedWorld extends World {
         negativeYBorder: 0,
         threeJSTrackPieces: [],
         trackWidth: 0,
+        finishPosition: new CANNON.Vec3(0,0,0)
     };
     render: boolean = true;
     disabled: boolean = false;
@@ -119,7 +125,7 @@ export class ExtendedWorld extends World {
      * @param vehicleGenome which details the vehicle.
      */
     addCar(vehicleGenome: vehicleGenome) {
-        const vehicle = new ExtendedRigidVehicle(
+        let vehicle = new ExtendedRigidVehicle(
             vehicleGenome,
             this.bodyMaterial,
             this.scene,
@@ -131,6 +137,24 @@ export class ExtendedWorld extends World {
     }
 
     /**
+     * Add multiple vehicles to the world according to their genome.
+     * @param vehicleGenomes An array of the vehicles to be added.
+     */
+    addCars(vehicleGenomes: vehicleGenome[]) {
+        vehicleGenomes.forEach(vehicleGenome => {
+            let vehicle = new ExtendedRigidVehicle(
+                vehicleGenome,
+                this.bodyMaterial,
+                this.scene,
+                this.carIdCounter++
+            );
+
+            this.populationManager.addCar(vehicle);
+            vehicle.addToWorld(this);
+        })
+    }
+
+    /**
      * Calculate a step inside the physicsengine and update the visuals for the cars accordingly.
      * FrameTime and the timeOut are passed as arguments to allow dynamic changes to these values.
      * @param frameTime specifies the amount of steps per frame.
@@ -138,12 +162,14 @@ export class ExtendedWorld extends World {
      */
     updatePhysicsAndScene(frameTime: number, timeOut: number) {
         //world.step(frameTime, delta, 1);
+        console.log(this.hasActiveBodies);
+        console.log(this.bodies);
         this.step(frameTime);
 
         if (this.render) {
 
             //Update leading car.
-            if (this.populationManager.disabledCars.has(this.populationManager.leadingCar.id)) {
+            if (!this.populationManager.activeCars.has(this.populationManager.leadingCar.id)) {
                 if (this.populationManager.activeCars.size > 0) {
                     this.populationManager.leadingCar.chassisBody.position.set(-1, 0, 0);
                 } else {
@@ -151,6 +177,7 @@ export class ExtendedWorld extends World {
                     return;
                 }
             }
+            console.log('got here');
 
             //Update position of cars inside the scene.
             this.populationManager.activeCars.forEach((car) => {
@@ -206,17 +233,17 @@ export class ExtendedWorld extends World {
      * @param timeOut the max amout of timeOut a car can have.
      */
     advanceTimeout(car: ExtendedRigidVehicle, timeOut: number) {
-        if (car.advanceTimeoutAndCheckIfDisabled(timeOut, this.track.negativeYBorder)) {
+        if (car.advanceTimeoutAndPosition(timeOut, this.track.negativeYBorder, this.track.finishPosition.x)) {
             this.removeVehicle(car);
         }
     }
 
     /**
-     * Removes the a vehicle from this world and disables it in the populationManager.
+     * Removes a vehicle from this world and disables it in the populationManager.
      * @param vehicle to be removed.
      */
     removeVehicle(vehicle: ExtendedRigidVehicle) {
-        if (this.populationManager.disableCar(vehicle)) {
+        if (this.populationManager.disableCar(vehicle, this.stepnumber)) {
             vehicle.removeFromWorld(this);
         }
     }
@@ -334,7 +361,7 @@ export class ExtendedWorld extends World {
         this.track.threeJSTrackPieces.push(trackStartVisual);
         this.scene.add(trackStartVisual);
 
-        //the always track starts 10 Meters in front of the cars
+        //the track always starts 10 Meters in front of the cars
         let currentPosition: CANNON.Vec3 = new CANNON.Vec3(10, 0, 0);
 
         //Construct the track by placing the track pieces at the correct positions according to the gradients
@@ -356,7 +383,7 @@ export class ExtendedWorld extends World {
                 xDist = -xDist;
             }
 
-            //Point to the placement (middle) of the neto be placed track piece
+            //Point to the placement (middle) of the current track piece
             currentPosition.x = currentPosition.x + xDist;
             currentPosition.y = currentPosition.y + yDist;
 
@@ -401,6 +428,7 @@ export class ExtendedWorld extends World {
             }
 
         });
+        this.track.finishPosition = currentPosition;
         this.track.negativeYBorder = lowestTrackPoint - 10;
     }
 
@@ -419,10 +447,12 @@ export class ExtendedWorld extends World {
     }
 
     /**
-     *
+     * Generated the next Generation. For now just a helper function.
      */
     generateNextGeneration() {
-        this.populationManager.createNextGeneration();
+        let nextGen = this.populationManager.createNextGeneration();
+        this.populationManager = new PopulationManager(nextGen.length);
+        this.addCars(nextGen);
     }
 
     /**
@@ -440,14 +470,22 @@ export class ExtendedWorld extends World {
                 this.removeObjectFromScene(wheelMesh);
             })
 
+            this.removeBody(vehicle.chassisBody);
+            vehicle.wheelBodies.forEach(wheel => {
+                this.removeBody(wheel);
+            })
+
             this.removeObjectFromScene(vehicle.visualBody);
             this.removeObjectFromScene(vehicle.wheelMaterial);
+            this.removeObjectFromScene(vehicle.wheelHoodMaterial);
             this.removeObjectFromScene(vehicle.bodyMaterial);
         })
 
         if (removeTrack) {
             this.removeTrack();
         }
+
+        this.populationManager.disabledCars.clear();
     }
 
     /**
@@ -516,7 +554,7 @@ export class ExtendedWorld extends World {
                 material: this.wheelMaterialMediumFriction,
                 canSteer: Math.floor(Math.random() * 2) === 1,
             };
-            console.log(wheel.canSteer);
+
             vehicle.wheels.push(wheel);
         }
 

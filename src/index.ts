@@ -42,7 +42,7 @@ var worldOptions = {
     quatNormalizeFast: false,
     quatNormalizeSkip: 1
 };
-var gravity = -24;
+var gravity = -9.82;
 const frameTime: number = 1 / 60;
 const fastForwardFrameTime: number = 1 / 20;
 const delta: number = 1; //???
@@ -111,6 +111,7 @@ function stopSimulation() {
 
 function continueSimulation() {
     simulateThisGeneration = true;
+    startNextGen = false;
     document.getElementById ("stopBtn").disabled = false;
     document.getElementById ("continueBtn").disabled = true;
     document.getElementById ("nextGenerationBtn").disabled = true;
@@ -180,7 +181,6 @@ function initGraphics() {
     trackAsphaltTexture.wrapS = THREE.RepeatWrapping;
     trackAsphaltTexture.wrapT = THREE.RepeatWrapping;
     trackAsphaltTexture.repeat = new THREE.Vector2(5,5);
-    console.log(trackAsphaltTexture);
     trackTexture = new THREE.MeshStandardMaterial(
         {
             map: trackAsphaltTexture
@@ -279,19 +279,15 @@ function render() {
         //set scene to loading
 
         if (startNextGen) {
-            startNextGen = false;
 
             worlds.forEach(world => {
                 world.cleanUpCurrentGeneration(false);
 
-                //Call these functions again to update the scene, which will then display nothing.
-                updatePhysics();
-                renderer.render(scene, camera);
-                stats.update();
-
                 world.generateNextGeneration();
+
+                continueSimulation();
+                requestAnimationFrame(render);
             })
-            requestAnimationFrame(render);
         } else {
 
             //The user can still move the camera around even if the cars are all disabled.
