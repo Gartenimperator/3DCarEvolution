@@ -70,9 +70,9 @@ export class PopulationManager {
         return true;
     }
 
-    createNextGeneration(): vehicleGenome[] {
-        this.fitnessData.sort((a,b) => a.fitness - b.fitness);
-        return this.fitnessData.map((fitnessData, index) => fitnessData.vehicleGen);
+    createNextGeneration(): fitnessData[] {
+        //TODO Selection, cross-over and mutation
+        return this.fitnessData.sort((a,b) => a.fitness - b.fitness);
     }
 
     mutate() {}

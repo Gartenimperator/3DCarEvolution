@@ -76,18 +76,29 @@ export class ExtendedWorld extends World {
         negativeYBorder: 0,
         threeJSTrackPieces: [],
         trackWidth: 0,
-        finishPosition: new CANNON.Vec3(0,0,0)
+        finishPosition: new CANNON.Vec3(0, 0, 0)
     };
     render: boolean = true;
     disabled: boolean = false;
 
+    /**
+     *
+     * @param scene
+     * @param options
+     * @param gravity
+     * @param groundBodyContactMaterialOptions
+     * @param populationSize
+     * @param id
+     * @param population
+     */
     constructor(
         scene: any,
         options: any,
         gravity: number,
         groundBodyContactMaterialOptions: any,
         populationSize: number,
-        id: number
+        id: number,
+        population: vehicleGenome[] | undefined
     ) {
         super(options);
         this.id = id;
@@ -103,7 +114,7 @@ export class ExtendedWorld extends World {
             groundBodyContactMaterialOptions
         );
 
-        this.initNewPopulation();
+        this.initPopulation(population);
 
         //Can be removed if debugging is unnecessary.
         this.cannonDebugRenderer = CannonDebugger(this.scene, this);
@@ -112,11 +123,16 @@ export class ExtendedWorld extends World {
     /**
      * Replace the current population with a new one according to the current populationSize.
      */
-    initNewPopulation() {
-        this.populationManager.activeCars.clear();
-        this.populationManager.disabledCars.clear();
-        for (var j = 0; j < this.populationManager.populationSize; j++) {
-            this.addCar(this.createRandomCar());
+    initPopulation(population: vehicleGenome[] | undefined) {
+        if (population && population.length > 0) {
+            console.log('Existing population');
+            population.map((vehicleGenom) => {
+                this.addCar(vehicleGenom);
+            });
+        } else {
+            for (var j = 0; j < this.populationManager.populationSize; j++) {
+                this.addCar(this.createRandomCar());
+            }
         }
     }
 
@@ -162,8 +178,6 @@ export class ExtendedWorld extends World {
      */
     updatePhysicsAndScene(frameTime: number, timeOut: number) {
         //world.step(frameTime, delta, 1);
-        console.log(this.hasActiveBodies);
-        console.log(this.bodies);
         this.step(frameTime);
 
         if (this.render) {
@@ -177,7 +191,6 @@ export class ExtendedWorld extends World {
                     return;
                 }
             }
-            console.log('got here');
 
             //Update position of cars inside the scene.
             this.populationManager.activeCars.forEach((car) => {
@@ -447,21 +460,13 @@ export class ExtendedWorld extends World {
     }
 
     /**
-     * Generated the next Generation. For now just a helper function.
-     */
-    generateNextGeneration() {
-        let nextGen = this.populationManager.createNextGeneration();
-        this.populationManager = new PopulationManager(nextGen.length);
-        this.addCars(nextGen);
-    }
-
-    /**
      * Removes the soon-to-be old THREE.Meshes of each vehicle.
      */
     cleanUpCurrentGeneration(removeTrack: boolean) {
 
         //Disable all cars first in case the simulation was prematurely stopped.
         this.populationManager.activeCars.forEach(vehicle => {
+            console.log('removing vehicle');
             this.removeVehicle(vehicle);
         })
 
@@ -484,8 +489,6 @@ export class ExtendedWorld extends World {
         if (removeTrack) {
             this.removeTrack();
         }
-
-        this.populationManager.disabledCars.clear();
     }
 
     /**

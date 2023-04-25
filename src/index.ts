@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module';
-import {ExtendedWorld} from "./ExtendedWorld";
+import {ExtendedWorld, vehicleGenome} from "./ExtendedWorld";
 import {Material} from "three";
 
 // Detects webgl
@@ -20,7 +20,7 @@ var camera: THREE.PerspectiveCamera, renderer: any;
 
 let scene = new THREE.Scene();
 
-// for more Info on the fakeCamera: https://stackoverflow.com/questions/53292145/forcing-orbitcontrols-to-navigate-around-a-moving-object-almost-working/53298655#53298655
+// for more Info why the fakeCamera: https://stackoverflow.com/questions/53292145/forcing-orbitcontrols-to-navigate-around-a-moving-object-almost-working/53298655#53298655
 var fakeCamera: THREE.PerspectiveCamera;
 
 var controls: OrbitControls;
@@ -59,7 +59,7 @@ var simpleTrack: number[] = [
     0, 15, 10, 0, 10, 0, 10, -30, -30, -30, -20, -10, 0, 10, 20, -90, 0, 80, -10, -10, -20, 0, 30,
     20, 10, 0];
 
-var trackGradients: number[] = simpleTrack;
+var trackGradients: number[] = jump;
 var trackPieceLengthX = 5;
 const textureLoader = new THREE.TextureLoader();
 let trackTexture: THREE.MeshStandardMaterial;
@@ -83,7 +83,7 @@ let simulateThisGeneration = true;
  * Input listeners
  */
 
-function startSimulation() {
+function startSimulation(population: vehicleGenome[] | undefined) {
 
     startNextGen = false;
     simulateThisGeneration = true;
@@ -92,7 +92,7 @@ function startSimulation() {
     document.getElementById ("nextGenerationBtn").disabled = true;
 
     initGraphics();
-    initWorlds();
+    initWorlds(population);
 }
 
 function startNextGeneration() {
@@ -191,7 +191,7 @@ function initGraphics() {
 /**
  * Initializes the worlds at the start of the genetic algorithm
  */
-function initWorlds() {
+function initWorlds(currentPopulation: vehicleGenome[] | undefined) {
     removeOldWorlds();
     for (var i = 0; i < amountOfWorlds; i++) {
         var world = new ExtendedWorld(
@@ -200,7 +200,8 @@ function initWorlds() {
             gravity,
             groundBodyContactMaterialOptions,
             population,
-            i
+            i,
+            currentPopulation
         );
 
         //world.initTrackWithHeightfield(matrix);
@@ -281,11 +282,10 @@ function render() {
         if (startNextGen) {
 
             worlds.forEach(world => {
-                world.cleanUpCurrentGeneration(false);
+                world.cleanUpCurrentGeneration(true);
 
-                world.generateNextGeneration();
-
-                continueSimulation();
+                let fitnessData = world.populationManager.createNextGeneration();
+                startSimulation(fitnessData.map(fitnessData => fitnessData.vehicleGen));
                 requestAnimationFrame(render);
             })
         } else {
