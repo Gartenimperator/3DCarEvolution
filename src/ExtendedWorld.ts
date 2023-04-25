@@ -554,7 +554,7 @@ export class ExtendedWorld extends World {
                 posY: (this.roundToFour(-vehicle.height + vehicle.height * Math.random() * 2)), //wheel position height
                 posZ: (this.roundToFour(-vehicle.width + vehicle.width * Math.random() * 2)), //wheel position width
 
-                material: this.wheelMaterialMediumFriction,
+                material: this.wheelMaterialLowFriction,
                 canSteer: Math.floor(Math.random() * 2) === 1,
             };
 

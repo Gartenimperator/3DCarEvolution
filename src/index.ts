@@ -32,7 +32,7 @@ var activeWorlds: Map<number, ExtendedWorld> = new Map();
 var worlds: ExtendedWorld[] = [];
 var inactiveWorlds: Map<number, ExtendedWorld> = new Map();
 var groundBodyContactMaterialOptions = {
-    friction: 0.9,
+    friction: 0.8,
     restitution: 0.3,
     contactEquationRelaxation: 3,
     frictionEquationStiffness: 1e8
@@ -42,7 +42,7 @@ var worldOptions = {
     quatNormalizeFast: false,
     quatNormalizeSkip: 1
 };
-var gravity = -9.82;
+var gravity: number = -9.82;
 const frameTime: number = 1 / 60;
 const fastForwardFrameTime: number = 1 / 20;
 const delta: number = 1; //???
@@ -54,12 +54,12 @@ var steps: number[] = [
     -90, 0, 0, -90
 ];
 var nowWorking: number[] = [0, 10, 0, 0, 45, -45, -90, 180, -90, 0, 0, 0, 0, -110, -45, 0, -30, -20, 0, 10, 10];
-var jump: number[] = [0, -10, 0, 10, 20, -90, -90, -90, 0, 70, 80, 90, -10, 0, 0, 90];
+var tumble: number[] = [-30,-30,-30,-30,-30,-30,-30,-30,-90,-90,-90,-90,-90,-90,-90,0,0,0,90,90,90,90,-30,-30,-30,-30];
 var simpleTrack: number[] = [
     0, 15, 10, 0, 10, 0, 10, -30, -30, -30, -20, -10, 0, 10, 20, -90, 0, 80, -10, -10, -20, 0, 30,
     20, 10, 0];
 
-var trackGradients: number[] = jump;
+var trackGradients: number[] = steps;
 var trackPieceLengthX = 5;
 const textureLoader = new THREE.TextureLoader();
 let trackTexture: THREE.MeshStandardMaterial;
@@ -85,14 +85,14 @@ let simulateThisGeneration = true;
 
 function startSimulation(population: vehicleGenome[] | undefined) {
 
-    startNextGen = false;
+    //startNextGen = false;
     simulateThisGeneration = true;
     document.getElementById ("stopBtn").disabled = false;
     document.getElementById ("continueBtn").disabled = true;
     document.getElementById ("nextGenerationBtn").disabled = true;
 
     initGraphics();
-    initWorlds(population);
+    initWorlds(undefined);
 }
 
 function startNextGeneration() {
@@ -117,13 +117,20 @@ function continueSimulation() {
     document.getElementById ("nextGenerationBtn").disabled = true;
 }
 
+function updateGravity() {
+    gravity = document.getElementById('gravity').value;
+}
+
 document.getElementById ("nextGenerationBtn").addEventListener ("click", startNextGeneration);
 
 document.getElementById ("stopBtn").addEventListener ("click", stopSimulation);
 
 document.getElementById ("continueBtn").addEventListener ("click", continueSimulation);
 
-document.getElementById ("startSimulationBtn").addEventListener ("click", startSimulation);
+document.getElementById ("startSimulationBtn").addEventListener ("click", startSimulation); //TODO
+
+document.getElementById('updateGravity').addEventListener('click', updateGravity);
+
 document.getElementById ("stopBtn").disabled = false;
 document.getElementById ("continueBtn").disabled = true;
 document.getElementById ("nextGenerationBtn").disabled = true;

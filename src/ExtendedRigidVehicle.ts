@@ -192,7 +192,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         }
 
         this.setWheelForce(
-            Math.max(5, Math.min(this.bodyMass * wheelMass, 1000)),
+            Math.max(5, Math.min(this.bodyMass * wheelMass * 2, 1500)),
             this.wheelBodies.length - 1
         );
     }
