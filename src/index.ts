@@ -77,7 +77,6 @@ var timeOut: number = 360;
  */
 
 let simulateThisGeneration = true;
-let autoRun = false;
 let isPaused = false;
 
 //HTML References
@@ -106,10 +105,6 @@ function startSimulation(population: vehicleGenome[] | undefined) {
 
     initGraphics();
     initWorlds(population);
-}
-
-function updateAutoRun() {
-    autoRun = autoRunCheckbox.checked;
 }
 
 function stopSimulation() {
@@ -141,7 +136,6 @@ stopBtn.addEventListener("click", stopSimulation);
 continueBtn.addEventListener("click", continueSimulation);
 newPopulationBtn.addEventListener("click", startSimulation); //TODO
 updateGravityBtn.addEventListener('click', updateGravity);
-autoRunCheckbox.addEventListener('change', updateAutoRun);
 
 /**
  * Init Functions
@@ -295,7 +289,7 @@ function render() {
     if (activeWorlds.size > 0 && simulateThisGeneration) {
         updatePhysics();
 
-    } else if (autoRun && simulateThisGeneration) {
+    } else if (autoRunCheckbox.checked && simulateThisGeneration) {
 
         simulateNextGeneration();
     }
