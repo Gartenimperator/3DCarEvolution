@@ -54,7 +54,7 @@ var steps: number[] = [
     -90, 0, 0, -90
 ];
 var nowWorking: number[] = [0, 10, 0, 0, 45, -45, -90, 180, -90, 0, 0, 0, 0, -110, -45, 0, -30, -20, 0, 10, 10];
-var tumble: number[] = [-30,-30,-30,-30,-30,-30,-30,-30,-90,-90,-90,-90,-90,-90,-90,0,0,0,90,90,90,90,-30,-30,-30,-30];
+var tumble: number[] = [-30, -30, -30, -30, -30, -30, -30, -30, -90, -90, -90, -90, -90, -90, -90, 0, 0, 0, 90, 90, 90, 90, -30, -30, -30, -30];
 var simpleTrack: number[] = [
     0, 15, 10, 0, 10, 0, 10, -30, -30, -30, -20, -10, 0, 10, 20, -90, 0, 80, -10, -10, -20, 0, 30,
     20, 10, 0];
@@ -76,67 +76,72 @@ var timeOut: number = 360;
  * Controller variables
  */
 
-let startNextGen = false;
 let simulateThisGeneration = true;
+let autoRun = false;
+let isPaused = false;
+
+//HTML References
+let nextGenBtn = document.getElementById('nextGenerationBtn');
+let stopBtn = document.getElementById("stopBtn");
+let continueBtn = document.getElementById("continueBtn");
+let newPopulationBtn = document.getElementById("startSimulationBtn"); //TODO
+let updateGravityBtn = document.getElementById('updateGravity');
+let autoRunCheckbox = document.getElementById('autoRunCheckbox');
 
 /**
  * Input listeners
  */
 
-function startSimulation(population: vehicleGenome[] | undefined) {
-
-    //startNextGen = false;
-    simulateThisGeneration = true;
-    document.getElementById ("stopBtn").disabled = false;
-    document.getElementById ("continueBtn").disabled = true;
-    document.getElementById ("nextGenerationBtn").disabled = true;
-
-    initGraphics();
-    initWorlds(undefined);
+function updateButtons(disableStopBtn: boolean, disableContinueBtn: boolean, disableNewPopulationBtn: boolean, disableNextGenBtn: boolean) {
+    stopBtn.disabled = disableStopBtn;
+    continueBtn.disabled = disableContinueBtn;
+    newPopulationBtn.disabled = disableNewPopulationBtn;
+    nextGenBtn.disabled = disableNextGenBtn;
 }
 
-function startNextGeneration() {
-    startNextGen = true;
-    document.getElementById ("stopBtn").disabled = true;
-    document.getElementById ("continueBtn").disabled = true;
-    document.getElementById ("nextGenerationBtn").disabled = true;
+function startSimulation(population: vehicleGenome[] | undefined) {
+
+    simulateThisGeneration = true;
+    updateButtons(false, true, false, true);
+
+    initGraphics();
+    initWorlds(population);
+}
+
+function updateAutoRun() {
+    autoRun = autoRunCheckbox.checked;
 }
 
 function stopSimulation() {
     simulateThisGeneration = false;
-    document.getElementById ("stopBtn").disabled = true;
-    document.getElementById ("continueBtn").disabled = false;
-    document.getElementById ("nextGenerationBtn").disabled = false;
+    isPaused = true;
+    updateButtons(true, false, false, false);
 }
 
 function continueSimulation() {
     simulateThisGeneration = true;
-    startNextGen = false;
-    document.getElementById ("stopBtn").disabled = false;
-    document.getElementById ("continueBtn").disabled = true;
-    document.getElementById ("nextGenerationBtn").disabled = true;
+    updateButtons(false, true, false, true);
+}
+
+// custom round function
+function roundToFive(num: number) {
+    return +(Math.round(num * 100000) / 100000);
 }
 
 function updateGravity() {
-    gravity = document.getElementById('gravity').value;
+    let value = document.getElementById('gravity').value;
+    value = parseFloat(value);
+    if (value >= -100 && value <= 100) {
+        gravity = roundToFive(value);
+    }
 }
 
-document.getElementById ("nextGenerationBtn").addEventListener ("click", startNextGeneration);
-
-document.getElementById ("stopBtn").addEventListener ("click", stopSimulation);
-
-document.getElementById ("continueBtn").addEventListener ("click", continueSimulation);
-
-document.getElementById ("startSimulationBtn").addEventListener ("click", startSimulation); //TODO
-
-document.getElementById('updateGravity').addEventListener('click', updateGravity);
-
-document.getElementById ("stopBtn").disabled = false;
-document.getElementById ("continueBtn").disabled = true;
-document.getElementById ("nextGenerationBtn").disabled = true;
-
-
-
+nextGenBtn.addEventListener("click", simulateNextGeneration);
+stopBtn.addEventListener("click", stopSimulation);
+continueBtn.addEventListener("click", continueSimulation);
+newPopulationBtn.addEventListener("click", startSimulation); //TODO
+updateGravityBtn.addEventListener('click', updateGravity);
+autoRunCheckbox.addEventListener('change', updateAutoRun);
 
 /**
  * Init Functions
@@ -187,12 +192,24 @@ function initGraphics() {
     const trackAsphaltTexture = textureLoader.load('./src/static/cardboard-texture.jpg');
     trackAsphaltTexture.wrapS = THREE.RepeatWrapping;
     trackAsphaltTexture.wrapT = THREE.RepeatWrapping;
-    trackAsphaltTexture.repeat = new THREE.Vector2(5,5);
+    trackAsphaltTexture.repeat = new THREE.Vector2(5, 5);
     trackTexture = new THREE.MeshStandardMaterial(
         {
             map: trackAsphaltTexture
         }
     )
+}
+
+function simulateNextGeneration() {
+    let fitnessData: any;
+
+    worlds.forEach(world => {
+        //world.cleanUpCurrentGeneration(true);
+        fitnessData = world.populationManager.createNextGeneration();
+        //TODO save into datastore to display it.
+    })
+
+    startSimulation(fitnessData.map(fitnessData => fitnessData.vehicleGen));
 }
 
 /**
@@ -227,15 +244,12 @@ function initWorlds(currentPopulation: vehicleGenome[] | undefined) {
 
 function removeOldWorlds() {
     //Clean up worlds.
+    //this allows the garbage collector to collect the unused objects faster
     worlds.forEach(world => {
-        //Call these functions again to update the scene, which will then display nothing.
         world.cleanUpCurrentGeneration(true);
     });
 
-    while (worlds.length) {
-        worlds.pop();
-    }
-
+    worlds = [];
     activeWorlds.clear();
     inactiveWorlds.clear();
 }
@@ -262,9 +276,9 @@ function updatePhysics() {
             activeWorlds.delete(world.id);
 
             if (activeWorlds.size === 0) {
-                document.getElementById ("stopBtn").disabled = true;
-                document.getElementById ("continueBtn").disabled = true;
-                document.getElementById ("nextGenerationBtn").disabled = false;
+                document.getElementById("stopBtn").disabled = true;
+                document.getElementById("continueBtn").disabled = true;
+                document.getElementById("nextGenerationBtn").disabled = false;
             }
         }
     });
@@ -274,43 +288,24 @@ function updatePhysics() {
  * Looping function which syncs the Three.scene and ExtendendWorld after each calculation step.
  */
 function render() {
+
+    camera.copy(fakeCamera);
+    requestAnimationFrame(render);
+
     if (activeWorlds.size > 0 && simulateThisGeneration) {
-
-        camera.copy(fakeCamera);
-        requestAnimationFrame(render);
-
         updatePhysics();
 
-        renderer.render(scene, camera);
-        stats.update();
-    } else {
-        //set scene to loading
+    } else if (autoRun && simulateThisGeneration) {
 
-        if (startNextGen) {
-
-            worlds.forEach(world => {
-                world.cleanUpCurrentGeneration(true);
-
-                let fitnessData = world.populationManager.createNextGeneration();
-                startSimulation(fitnessData.map(fitnessData => fitnessData.vehicleGen));
-                requestAnimationFrame(render);
-            })
-        } else {
-
-            //The user can still move the camera around even if the cars are all disabled.
-            camera.copy(fakeCamera);
-            requestAnimationFrame(render);
-
-            renderer.render(scene, camera);
-            stats.update();
-        }
+        simulateNextGeneration();
     }
+    renderer.render(scene, camera);
+    stats.update();
 }
 
 /**
  * main
  */
 
-initGraphics();
-initWorlds();
+startSimulation(undefined);
 render();
