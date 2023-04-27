@@ -59,6 +59,11 @@ var simpleTrack: number[] = [
     0, 15, 10, 0, 10, 0, 10, -30, -30, -30, -20, -10, 0, 10, 20, -90, 0, 80, -10, -10, -20, 0, 30,
     20, 10, 0];
 
+/**
+ * Include hurdles. May be spheres placed into the track. cylinder or convexCustomShape better?
+ * CHeck for performance issues -> limit hurdles? how to regulate placement of hurdles?
+ */
+
 var trackGradients: number[] = steps;
 var trackPieceLengthX = 5;
 const textureLoader = new THREE.TextureLoader();
