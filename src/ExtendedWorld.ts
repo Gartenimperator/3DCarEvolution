@@ -38,9 +38,8 @@ export type wheel = {
     material: CANNON.Material,
     radius: number,
     width: number,
-    posX: number,
-    posY: number,
-    posZ: number,
+    vector: number,
+    distance: number,
     canSteer: boolean,
 }
 
@@ -50,9 +49,7 @@ export type wheel = {
  */
 export type vehicleGenome = {
     baseWeight: number,
-    length: number,
-    height: number,
-    width: number,
+    bodyVectors: CANNON.Vec3[],
     wheels: wheel[],
 }
 
@@ -534,25 +531,32 @@ export class ExtendedWorld extends World {
         //GenerateRandomCar Here
         var vehicle: vehicleGenome = {
             baseWeight: (this.roundToFour(Math.random() * 50)), //base weigth - influences the cars calculated weight and its engine power
-            length: (this.roundToFour(Math.random() * 7)),
-            height: (this.roundToFour(Math.random() * 6)),
-            width: (this.roundToFour(Math.random() * 6)),
+            bodyVectors: [],
             wheels: []
         };
+
+        //Minimum 4 vectors.
+        var bodyVectorAmount = 4 + Math.floor(Math.random() * 10);
+
+        for (let i = 0; i < bodyVectorAmount; i++) {
+            let x = (Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 4);
+            let y = (Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 4);
+            let z = (Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 4);
+            vehicle.bodyVectors.push(new CANNON.Vec3(x, y, z));
+        }
 
         var wheelAmount = Math.floor(Math.random() * 6);
 
         //TODO How to handle 'incorrect' wheels
         // fe wheels that would spawn too far away from the car
-        for (var i = 0; i < wheelAmount; i++) {
+        for (let j = 0; j < wheelAmount; j++) {
             var wheel: wheel = {
                 radius: (this.roundToFour(Math.max(1.5, Math.random() * 3))), //wheel radius [1.5, 3)
                 width: (this.roundToFour(2.5 - Math.random())), //wheel width (1.5, 2.5]
 
                 //Try to generate wheels which are touching the car
-                posX: (this.roundToFour(-vehicle.length + vehicle.length * Math.random() * 2)), //wheel position lengthwise
-                posY: (this.roundToFour(-vehicle.height + vehicle.height * Math.random() * 2)), //wheel position height
-                posZ: (this.roundToFour(-vehicle.width + vehicle.width * Math.random() * 2)), //wheel position width
+                vector: Math.floor(Math.random() * vehicle.bodyVectors.length), //placement on the vector
+                distance: Math.random(),
 
                 material: this.wheelMaterialLowFriction,
                 canSteer: Math.floor(Math.random() * 2) === 1,
@@ -560,6 +564,7 @@ export class ExtendedWorld extends World {
 
             vehicle.wheels.push(wheel);
         }
+        console.log(vehicle);
 
         return vehicle;
     }

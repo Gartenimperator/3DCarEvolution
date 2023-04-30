@@ -64,13 +64,13 @@ var simpleTrack: number[] = [
  * CHeck for performance issues -> limit hurdles? how to regulate placement of hurdles?
  */
 
-var trackGradients: number[] = steps;
+var trackGradients: number[] = simpleTrack;
 var trackPieceLengthX = 5;
 const textureLoader = new THREE.TextureLoader();
 let trackTexture: THREE.MeshStandardMaterial;
 
 //Generic-Algorithm global variables
-var population: number = 50;
+var population: number = 1;
 var amountOfWorlds: number = 1;
 
 var mutationRate = 0.01;
@@ -139,7 +139,7 @@ function updateGravity() {
 nextGenBtn.addEventListener("click", simulateNextGeneration);
 stopBtn.addEventListener("click", stopSimulation);
 continueBtn.addEventListener("click", continueSimulation);
-newPopulationBtn.addEventListener("click", startSimulation); //TODO
+newPopulationBtn.addEventListener("click", startSimulation()); //TODO
 updateGravityBtn.addEventListener('click', updateGravity);
 
 /**

@@ -4,6 +4,7 @@ import * as THREE from "three";
 import {Material, Mesh, Scene} from "three";
 import {Groups} from "./Groups";
 import {vehicleGenome} from "./ExtendedWorld";
+import qh from 'quickhull3d';
 
 /**
  * Extends the existing CANNON.RigidVehicle class to make interaction between Three and Cannon easier.
@@ -60,9 +61,8 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             this.addWheelWithMesh(
                 this.vehicleGen.wheels[i].radius,
                 this.vehicleGen.wheels[i].width,
-                this.vehicleGen.wheels[i].posX, //length - x
-                this.vehicleGen.wheels[i].posY, //height - y
-                this.vehicleGen.wheels[i].posZ, //width - z
+                this.vehicleGen.wheels[i].vector,
+                this.vehicleGen.wheels[i].distance,
                 this.vehicleGen.wheels[i].material,
                 this.vehicleGen.wheels[i].canSteer,
                 scene
@@ -80,11 +80,28 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         if (bodyMaterial == undefined) {
             return;
         }
-        //Add physical Body
-        var chassisShape = new CANNON.Box(new CANNON.Vec3(this.vehicleGen.length, this.vehicleGen.height, this.vehicleGen.width));
 
-        //the bodyMass can't be lighter than 10 Kg
-        this.bodyMass = Math.max(this.vehicleGen.length * this.vehicleGen.height * this.vehicleGen.width, 10);
+        let vertices: number[[]] = [];
+
+        //Convert the vehicleGen.bodyVectors to a number [[]] array with the same order.
+        this.vehicleGen.bodyVectors.forEach(bodyVector => {
+            let vector: number[] = [];
+            vector.push(bodyVector.x);
+            vector.push(bodyVector.y);
+            vector.push(bodyVector.z);
+            vertices.push(vector);
+        })
+
+        //Faces are calculated by the algorithm from https://github.com/mauriciopoppe/quickhull3d
+        let faces: number [][] = qh(vertices, {
+            skipTriangulation: false,
+        });
+
+        //Shape for the physical vehicle body.
+        let chassisShapeComplex = new CANNON.ConvexPolyhedron({
+            vertices: this.vehicleGen.bodyVectors,
+            faces: faces
+        });
 
         this.vehicleMass = this.vehicleMass + this.bodyMass;
 
@@ -95,27 +112,25 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             collisionFilterGroup: Groups.GROUP1,
             collisionFilterMask: Groups.GROUP2 | Groups.GROUP3
         });
-        chassisBody.addShape(chassisShape);
+        chassisBody.addShape(chassisShapeComplex);
         this.chassisBody = chassisBody;
 
-        //Add visual Body
-        var geometry = new THREE.BoxGeometry(this.vehicleGen.length * 2, this.vehicleGen.height * 2, this.vehicleGen.width * 2); // double chasis shape
+        //Geometry for the visual body (same as the physical body).
+        let geometry = this.createThreeGeometry(vertices, faces);
 
         //Add visual Body
         if (scene != undefined) {
             this.visualBody = new THREE.Mesh(geometry, this.bodyMaterial);
             scene.add(this.visualBody);
         }
-
     }
 
     /**
      * Creates a wheel with CANNON according to the passed parameters as well as the fitting visual representation in Three.
      * @param radius of the wheel.
      * @param width of the wheel.
-     * @param positionX of the wheel.
-     * @param positionY of the wheel.
-     * @param positionZ of the wheel.
+     * @param vector on which the wheel will be generated.
+     * @param distance to the center of the body.
      * @param physicalWheelMaterial of the wheel. If the param is undefined no physical CANNON.Body will be created.
      * @param canSteer defines if the wheel is steerable or not.
      * @param scene the wheel is placed inside of. If the param is undefined no visual THREE.Mesh will be created.
@@ -123,9 +138,8 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     addWheelWithMesh(
         radius: number,
         width: number,
-        positionX: number,
-        positionY: number,
-        positionZ: number,
+        vector: number,
+        distance: number,
         physicalWheelMaterial: CANNON.Material | undefined,
         canSteer: boolean,
         scene: THREE.Scene | undefined
@@ -133,7 +147,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         //Add wheel physical body
         if (physicalWheelMaterial != undefined) {
-            this.addPhysicalWheel(radius, width, positionX, positionY, positionZ, physicalWheelMaterial, canSteer);
+            this.addPhysicalWheel(radius, width, vector, distance, physicalWheelMaterial, canSteer);
         }
 
         //Add wheel visual body
@@ -146,18 +160,16 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * Adds a wheel according to the parameters.
      * @param radius of the wheel.
      * @param width of the wheel.
-     * @param positionX of the wheel.
-     * @param positionY of the wheel.
-     * @param positionZ of the wheel.
+     * @param vector
+     * @param distance
      * @param physicalWheelMaterial of the wheel.
      * @param canSteer defines if the wheel is steerable or not.
      * @private
      */
     private addPhysicalWheel(radius: number,
                              width: number,
-                             positionX: number,
-                             positionY: number,
-                             positionZ: number,
+                             vector: number,
+                             distance: number,
                              physicalWheelMaterial: CANNON.Material,
                              canSteer: boolean) {
         const wheelVolume = Math.PI * width * (radius * radius);
@@ -179,7 +191,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         this.addWheel({
             body: wheelBody,
-            position: new CANNON.Vec3(positionX, positionY, positionZ),
+            position: this.vehicleGen.bodyVectors[vector].scale(distance),
             axis: new CANNON.Vec3(0, 0, -1)
         });
 
@@ -192,7 +204,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         }
 
         this.setWheelForce(
-            Math.max(5, Math.min(this.bodyMass * wheelMass * 2, 1500)),
+            wheelForce,
             this.wheelBodies.length - 1
         );
     }
@@ -223,6 +235,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      *
      * @param timeOut the max amount of timeOut a car can have.
      * @param yBorder describes the lowest point of the track.
+     * @param finishLine is the x-coordinate of the finish line.
      * @return true if and only if the car should be disabled.
      */
     advanceTimeoutAndPosition(timeOut: number, yBorder: number, finishLine: number): boolean {
@@ -284,22 +297,20 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param vertices contain all of the Vertices.
      * @param faces define the faces created by the vertices.
      */
-    createThreeGeometry(vertices: CANNON.Vec3[], faces: number[[]]): THREE.BufferGeometry {
+    createThreeGeometry(vertices: number[[]], faces: number[[]]): THREE.BufferGeometry {
 
         let convertedVertices: number[] = [];
 
         faces.forEach(face => {
-            for (let i = 0; i < face.length - 2; i++) {
-                convertedVertices.push(vertices[face[0]].x);
-                convertedVertices.push(vertices[face[0]].y);
-                convertedVertices.push(vertices[face[0]].z);
-                convertedVertices.push(vertices[face[i + 1]].x);
-                convertedVertices.push(vertices[face[i + 1]].y);
-                convertedVertices.push(vertices[face[i + 1]].z);
-                convertedVertices.push(vertices[face[i + 2]].x);
-                convertedVertices.push(vertices[face[i + 2]].y);
-                convertedVertices.push(vertices[face[i + 2]].z);
-            }
+            convertedVertices.push(vertices[face[0]][0]);
+            convertedVertices.push(vertices[face[0]][1]);
+            convertedVertices.push(vertices[face[0]][2]);
+            convertedVertices.push(vertices[face[1]][0]);
+            convertedVertices.push(vertices[face[1]][1]);
+            convertedVertices.push(vertices[face[1]][2]);
+            convertedVertices.push(vertices[face[2]][0]);
+            convertedVertices.push(vertices[face[2]][1]);
+            convertedVertices.push(vertices[face[2]][2]);
         })
 
         let floatVertices = new Float32Array(convertedVertices);
@@ -313,18 +324,20 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     /**
      * Returns the vehicle genome as an Array for the crossover and mutation process.
      */
-    toArray() : number[] {
+    toArray(): number[] {
         let genAsArray: number[] = [];
         genAsArray.push(this.vehicleGen.baseWeight);
-        genAsArray.push(this.vehicleGen.length);
-        genAsArray.push(this.vehicleGen.height);
-        genAsArray.push(this.vehicleGen.width);
+        this.vehicleGen.bodyVectors.forEach(bodyVector => {
+            genAsArray.push(bodyVector.x);
+            genAsArray.push(bodyVector.y);
+            genAsArray.push(bodyVector.z);
+            //TODO Material problem
+        })
         this.vehicleGen.wheels.forEach(wheel => {
             genAsArray.push(wheel.radius);
             genAsArray.push(wheel.width);
-            genAsArray.push(wheel.posX);
-            genAsArray.push(wheel.posY);
-            genAsArray.push(wheel.posZ);
+            genAsArray.push(wheel.vector);
+            genAsArray.push(wheel.distance);
             //TODO Material problem
         })
 
