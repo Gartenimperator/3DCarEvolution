@@ -139,7 +139,7 @@ function updateGravity() {
 nextGenBtn.addEventListener("click", simulateNextGeneration);
 stopBtn.addEventListener("click", stopSimulation);
 continueBtn.addEventListener("click", continueSimulation);
-newPopulationBtn.addEventListener("click", startSimulation()); //TODO
+newPopulationBtn.addEventListener("click", startSimulation); //TODO
 updateGravityBtn.addEventListener('click', updateGravity);
 
 /**

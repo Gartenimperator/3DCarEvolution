@@ -38,8 +38,9 @@ export type wheel = {
     material: CANNON.Material,
     radius: number,
     width: number,
-    vector: number,
-    distance: number,
+    posX: number,
+    posY: number,
+    posZ: number,
     canSteer: boolean,
 }
 
@@ -524,7 +525,7 @@ export class ExtendedWorld extends World {
 
     /**
      * Generates a new random vehicle. This vehicle hax a maximum length of 5 and a maximum width/height of 2 meters.
-     * The amout, placement and size of wheels is also randomly generated. The wheel radius and width have a maximum size of 1 meter.
+     * The amount, placement and size of wheels is also randomly generated. The wheel radius and width have a maximum size of 1 meter.
      * The wheel position is generated according to the size of the vehicle body, so that the wheels center has to always touch the body.
      */
     createRandomCar(): vehicleGenome {
@@ -539,11 +540,16 @@ export class ExtendedWorld extends World {
         var bodyVectorAmount = 4 + Math.floor(Math.random() * 10);
 
         for (let i = 0; i < bodyVectorAmount; i++) {
-            let x = (Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 4);
-            let y = (Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 4);
-            let z = (Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 4);
+            let x = this.roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 6));
+            let y = this.roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 6));
+            let z = this.roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 6));
             vehicle.bodyVectors.push(new CANNON.Vec3(x, y, z));
         }
+        vehicle.bodyVectors.push(new CANNON.Vec3(0.5, -0.5, -0.5));
+        vehicle.bodyVectors.push(new CANNON.Vec3(0.5, -0.5, 0.5));
+        vehicle.bodyVectors.push(new CANNON.Vec3(-0.5, -0.5, 0));
+        vehicle.bodyVectors.push(new CANNON.Vec3(0, 0.5, 0));
+        vehicle.bodyVectors.push(new CANNON.Vec3(0, -0.5, 0));
 
         var wheelAmount = Math.floor(Math.random() * 6);
 
@@ -555,8 +561,10 @@ export class ExtendedWorld extends World {
                 width: (this.roundToFour(2.5 - Math.random())), //wheel width (1.5, 2.5]
 
                 //Try to generate wheels which are touching the car
-                vector: Math.floor(Math.random() * vehicle.bodyVectors.length), //placement on the vector
-                distance: Math.random(),
+                posX: this.roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 3)), //wheel position lengthwise
+                posY: this.roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 3)), //wheel position height
+                posZ: this.roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 3)), //wheel position width
+
 
                 material: this.wheelMaterialLowFriction,
                 canSteer: Math.floor(Math.random() * 2) === 1,
@@ -564,7 +572,6 @@ export class ExtendedWorld extends World {
 
             vehicle.wheels.push(wheel);
         }
-        console.log(vehicle);
 
         return vehicle;
     }

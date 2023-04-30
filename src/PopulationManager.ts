@@ -24,9 +24,7 @@ export class PopulationManager {
     constructor(populationSize: number) {
         //dummy vehicle
         this.leadingCar = new ExtendedRigidVehicle( {
-            width: 1,
-            length: 1,
-            height: 1,
+            bodyVectors: [],
             baseWeight: 1,
             wheels: []
         },  undefined, undefined, -1);
