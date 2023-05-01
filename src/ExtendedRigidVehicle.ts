@@ -4,7 +4,7 @@ import * as THREE from "three";
 import {Material, Mesh, Scene} from "three";
 import {Groups} from "./Groups";
 import {vehicleGenome, wheel} from "./ExtendedWorld";
-import qh, { isPointInsideHull } from 'quickhull3d';
+import qh, {isPointInsideHull} from 'quickhull3d';
 
 /**
  * Extends the existing CANNON.RigidVehicle class to make interaction between Three and Cannon easier.
@@ -62,22 +62,52 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         }
 
         let body: CANNON.Vec3[] = [
+            new CANNON.Vec3(3.6404, -4.1438, 1.5658), // 1
+            new CANNON.Vec3(3.6672, -4.0873, 2.5387), // 2
+            new CANNON.Vec3(-2.1891, -5.8915, -3.8511), // 3
+            new CANNON.Vec3(2.6775, -4.5517, 1.5991), // 4
+            /*
+            new CANNON.Vec3(0.5, 0, 0),
+            new CANNON.Vec3(0, 0, 0.5),
+            new CANNON.Vec3(0, 0, -0.5),
+            new CANNON.Vec3(-0.5, 0, 0),
+            new CANNON.Vec3(0, 0.5, 0),
+            new CANNON.Vec3(0, -0.5, 0)
+
+             */
+        ];
+
+        let body2: CANNON.Vec3[] = [
             new CANNON.Vec3(3.6404, -4.1438, 1.5658),
             new CANNON.Vec3(-5.7782, -1.1113, 5.6078),
             new CANNON.Vec3(-1.0519, 3.85, -2.7965),
-            new CANNON.Vec3(2.6775, -4.5517, 1.5991), // change -4.5517 to -4.6517 and the problem doesnt ocour :)
+            new CANNON.Vec3(2.6775, -4.7, 1.5991), // change -4.5517 to -4.6517 and the problem doesnt ocour :)
+            new CANNON.Vec3(2.6775, -4.7, -1.5991), // change -4.5517 to -4.6517 and the problem doesnt ocour :)
+            new CANNON.Vec3(2.6775, -5, 1.5991), // change -4.5517 to -4.6517 and the problem doesnt ocour :)
             new CANNON.Vec3(-1.9583, -1.5233, 3.884),
             new CANNON.Vec3(0.5224, -4.1875, -3.0021),
             new CANNON.Vec3(3.6672, -4.0873, 2.5387),
-            new CANNON.Vec3(-2.1891, -5.8915, -3.8511)
-        ]
+            new CANNON.Vec3(-2.1891, -5.8915, -3.8511),
+            new CANNON.Vec3(-2.1891, -5.8915, -7.8511),
+            new CANNON.Vec3(-2.1891, -5.8915, -10.8511),
+            /*
+            new CANNON.Vec3(0.5, 0, 0),
+            new CANNON.Vec3(0, 0, 0.5),
+            new CANNON.Vec3(0, 0, -0.5),
+            new CANNON.Vec3(-0.5, 0, 0),
+            new CANNON.Vec3(0, 0.5, 0),
+            new CANNON.Vec3(0, -0.5, 0)
+
+             */
+        ];
 
         this.vehicleGen.bodyVectors = body;
 
         let vertices = this.toNumberArray(this.vehicleGen.bodyVectors);
+        let vertices2 = this.toNumberArray(this.vehicleGen.bodyVectors);
 
         let facesTriangulized: number [][] = qh(vertices, {
-            skipTriangulation: false,
+            skipTriangulation: true,
         });
 
         //Geometry for the visual body (same as the physical body).
@@ -89,15 +119,14 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             scene.add(this.visualBody);
         }
 
-        let onlyOuterVertices = this.removeUnusedVectorsAndUpdateGen(vertices, facesTriangulized);
+        //CANNON.Vec3
+
+        let onlyOuterVertices = this.removeUnusedVectorsAndUpdateGen(vertices2, facesTriangulized);
 
         //Faces are calculated by the algorithm from https://github.com/mauriciopoppe/quickhull3d
         let facesNotTriangulized: number [][] = qh(onlyOuterVertices, {
             skipTriangulation: true,
         });
-
-        console.log(onlyOuterVertices);
-        console.log(facesNotTriangulized);
 
         this.faces = facesNotTriangulized;
 
@@ -122,6 +151,8 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         });
         chassisBody.addShape(chassisShapeComplex);
         this.chassisBody = chassisBody;
+
+        console.log(this.chassisBody.boundingRadius);
     }
 
     /**
@@ -173,7 +204,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         let convertedVertices: number[][] = [];
         let outerBodyVectors: CANNON.Vec3[] = [];
 
-        isInsideTheShape.forEach((isInside, i ) => {
+        isInsideTheShape.forEach((isInside, i) => {
             if (!isInside) {
                 convertedVertices.push(vertices[i]);
                 outerBodyVectors.push(this.vehicleGen.bodyVectors[i]);
@@ -181,6 +212,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         })
 
         this.vehicleGen.bodyVectors = outerBodyVectors;
+        console.log('insideToCannonVec' + outerBodyVectors);
         return convertedVertices;
     }
 
