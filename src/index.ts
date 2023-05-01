@@ -70,7 +70,7 @@ const textureLoader = new THREE.TextureLoader();
 let trackTexture: THREE.MeshStandardMaterial;
 
 //Generic-Algorithm global variables
-var population: number = 1;
+var population: number = 40;
 var amountOfWorlds: number = 1;
 
 var mutationRate = 0.01;
@@ -203,9 +203,9 @@ function simulateNextGeneration() {
     let fitnessData: any;
 
     worlds.forEach(world => {
-        //world.cleanUpCurrentGeneration(true);
+        world.cleanUpCurrentGeneration(true);
         fitnessData = world.populationManager.createNextGeneration();
-        //TODO save into datastore to display it.
+        console.log(fitnessData);
     })
 
     startSimulation(fitnessData.map(fitnessData => fitnessData.vehicleGen));
@@ -268,7 +268,7 @@ function updatePhysics() {
             world.updatePhysicsAndScene(frameTime, timeOut);
 
             //uncomment to view debug mode
-            world.cannonDebugRenderer.update();
+            //world.cannonDebugRenderer.update();
         } else {
             console.log('Disabling world with id: ' + world.id);
             inactiveWorlds.set(world.id, world);

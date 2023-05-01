@@ -29,9 +29,14 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         opacity: 1.0
     });
     bodyMaterial = new THREE.MeshBasicMaterial({
-        color: 'red',
+        color: 0xC4151C,
         transparent: true,
-        opacity: 0.4
+        opacity: 1.0
+    });
+    lineMaterial = new THREE.LineBasicMaterial({
+        color: 0x0000ff,
+        transparent: true,
+        opacity: 1.0
     });
     vehicleGen: vehicleGenome;
     faces: number[][];
@@ -57,71 +62,25 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      */
     addBody(bodyMaterial: CANNON.Material | undefined, scene: Scene | undefined) {
 
-        if (bodyMaterial == undefined) {
+        if (this.vehicleGen.bodyVectors.length < 4) {
             return;
         }
 
-        let body: CANNON.Vec3[] = [
-            new CANNON.Vec3(3.6404, -4.1438, 1.5658), // 1
-            new CANNON.Vec3(3.6672, -4.0873, 2.5387), // 2
-            new CANNON.Vec3(-2.1891, -5.8915, -3.8511), // 3
-            new CANNON.Vec3(2.6775, -4.5517, 1.5991), // 4
-            /*
-            new CANNON.Vec3(0.5, 0, 0),
-            new CANNON.Vec3(0, 0, 0.5),
-            new CANNON.Vec3(0, 0, -0.5),
-            new CANNON.Vec3(-0.5, 0, 0),
-            new CANNON.Vec3(0, 0.5, 0),
-            new CANNON.Vec3(0, -0.5, 0)
-
-             */
-        ];
-
-        let body2: CANNON.Vec3[] = [
-            new CANNON.Vec3(3.6404, -4.1438, 1.5658),
-            new CANNON.Vec3(-5.7782, -1.1113, 5.6078),
-            new CANNON.Vec3(-1.0519, 3.85, -2.7965),
-            new CANNON.Vec3(2.6775, -4.7, 1.5991), // change -4.5517 to -4.6517 and the problem doesnt ocour :)
-            new CANNON.Vec3(2.6775, -4.7, -1.5991), // change -4.5517 to -4.6517 and the problem doesnt ocour :)
-            new CANNON.Vec3(2.6775, -5, 1.5991), // change -4.5517 to -4.6517 and the problem doesnt ocour :)
-            new CANNON.Vec3(-1.9583, -1.5233, 3.884),
-            new CANNON.Vec3(0.5224, -4.1875, -3.0021),
-            new CANNON.Vec3(3.6672, -4.0873, 2.5387),
-            new CANNON.Vec3(-2.1891, -5.8915, -3.8511),
-            new CANNON.Vec3(-2.1891, -5.8915, -7.8511),
-            new CANNON.Vec3(-2.1891, -5.8915, -10.8511),
-            /*
-            new CANNON.Vec3(0.5, 0, 0),
-            new CANNON.Vec3(0, 0, 0.5),
-            new CANNON.Vec3(0, 0, -0.5),
-            new CANNON.Vec3(-0.5, 0, 0),
-            new CANNON.Vec3(0, 0.5, 0),
-            new CANNON.Vec3(0, -0.5, 0)
-
-             */
-        ];
-
-        this.vehicleGen.bodyVectors = body;
+        this.vehicleGen.bodyVectors = this.centerVectorsAround0(this.vehicleGen.bodyVectors);
 
         let vertices = this.toNumberArray(this.vehicleGen.bodyVectors);
-        let vertices2 = this.toNumberArray(this.vehicleGen.bodyVectors);
 
         let facesTriangulized: number [][] = qh(vertices, {
-            skipTriangulation: true,
+            skipTriangulation: false,
         });
-
-        //Geometry for the visual body (same as the physical body).
-        let geometry = this.createThreeGeometry(vertices, facesTriangulized);
 
         //Add visual Body
         if (scene != undefined) {
-            this.visualBody = new THREE.Mesh(geometry, this.bodyMaterial);
+            this.visualBody = this.createThreeMesh(vertices, facesTriangulized);
             scene.add(this.visualBody);
         }
 
-        //CANNON.Vec3
-
-        let onlyOuterVertices = this.removeUnusedVectorsAndUpdateGen(vertices2, facesTriangulized);
+        let onlyOuterVertices = this.removeUnusedVectorsAndUpdateGen(vertices, facesTriangulized);
 
         //Faces are calculated by the algorithm from https://github.com/mauriciopoppe/quickhull3d
         let facesNotTriangulized: number [][] = qh(onlyOuterVertices, {
@@ -130,29 +89,27 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         this.faces = facesNotTriangulized;
 
-        //Shape for the physical vehicle body.
-        let chassisShapeComplex = new CANNON.ConvexPolyhedron({
-            vertices: this.vehicleGen.bodyVectors,
-            faces: facesNotTriangulized
-        });
-
         this.vehicleMass = this.vehicleMass + this.bodyMass;
-
-        console.log(chassisShapeComplex.volume());
 
         this.bodyMass = 100;
 
         var chassisBody = new CANNON.Body({
             mass: this.bodyMass,
-            position: new CANNON.Vec3(0, 10, 0), //cars spawn 10 meters in the air.
             material: bodyMaterial,
+            position: new CANNON.Vec3(0, 10, 0),
             collisionFilterGroup: Groups.GROUP1,
             collisionFilterMask: Groups.GROUP2 | Groups.GROUP3
         });
-        chassisBody.addShape(chassisShapeComplex);
-        this.chassisBody = chassisBody;
 
-        console.log(this.chassisBody.boundingRadius);
+        //Shape for the physical vehicle body.
+        this.faces.forEach(face => {
+            let chassisShapeComplex = new CANNON.ConvexPolyhedron({
+                vertices: this.vehicleGen.bodyVectors,
+                faces: [face]
+            });
+            chassisBody.addShape(chassisShapeComplex);
+        })
+        this.chassisBody = chassisBody;
     }
 
     /**
@@ -212,7 +169,6 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         })
 
         this.vehicleGen.bodyVectors = outerBodyVectors;
-        console.log('insideToCannonVec' + outerBodyVectors);
         return convertedVertices;
     }
 
@@ -310,12 +266,16 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param scene the wheel is added to.
      */
     addWheelMesh(radius: number, width: number, scene: THREE.Scene) {
+
         let wheelVisual = new THREE.CylinderGeometry(radius, radius, width, 26, 1);
         let wheelHood = new THREE.CylinderGeometry(radius * 0.8, radius * 0.8, width * 1.1, 26, 1);
+
+        //rotate so it aligns with the wheels pointing towards the CANNON.js x-coordinate.
         wheelVisual.rotateZ(Math.PI / 2);
         wheelHood.rotateZ(Math.PI / 2);
         wheelVisual.rotateY(Math.PI / 2);
         wheelHood.rotateY(Math.PI / 2);
+
         var wheelMesh = new THREE.Mesh(wheelVisual, this.wheelMaterial);
         wheelMesh.add(new THREE.Mesh(wheelHood, this.wheelHoodMaterial));
         wheelMesh.add(new THREE.Mesh(new THREE.BoxGeometry(radius * 0.6, radius * 0.2, width * 1.2), this.wheelMaterial));
@@ -366,7 +326,9 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      */
     disable() {
         if (this.visualBody.material instanceof Material) {
-            this.visualBody.material.opacity = 0.4;
+            this.visualBody.material.opacity = 0.3;
+            this.lineMaterial.opacity = 0.4;
+
         }
 
         this.wheelMeshes.forEach(wheel => {
@@ -391,9 +353,11 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param vertices contain all of the Vertices.
      * @param faces define the faces created by the vertices.
      */
-    createThreeGeometry(vertices: number[[]], faces: number[[]]): THREE.BufferGeometry {
+    createThreeMesh(vertices: number[[]], faces: number[[]]): THREE.Mesh {
 
         let convertedVertices: number[] = [];
+
+        const points = [];
 
         faces.forEach(face => {
             convertedVertices.push(vertices[face[0]][0]);
@@ -405,14 +369,23 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             convertedVertices.push(vertices[face[2]][0]);
             convertedVertices.push(vertices[face[2]][1]);
             convertedVertices.push(vertices[face[2]][2]);
+
+            points.push(new THREE.Vector3(vertices[face[0]][0], vertices[face[0]][1], vertices[face[0]][2]));
+            points.push(new THREE.Vector3(vertices[face[1]][0], vertices[face[1]][1], vertices[face[1]][2]));
+            points.push(new THREE.Vector3(vertices[face[2]][0], vertices[face[2]][1], vertices[face[2]][2]));
         })
+
+        let test = new THREE.BufferGeometry().setFromPoints(points);
+        const material = this.lineMaterial;
+        const lines = new THREE.Line(test, material);
 
         let floatVertices = new Float32Array(convertedVertices); //TODO This may cause flickering cause of float precision loss
 
         let geometry = new THREE.BufferGeometry();
         geometry.setAttribute('position', new THREE.BufferAttribute(floatVertices, 3));
-
-        return geometry;
+        let mesh = new THREE.Mesh(geometry, this.bodyMaterial);
+        mesh.add(lines);
+        return mesh;
     }
 
     /**
@@ -458,6 +431,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
     private toNumberArray(bodyVectors: CANNON.Vec3[]) {
         let vertices: number[][] = [];
+
         //Convert the CANNON.Vec3 vectors to a number [[]] array with the same order.
         bodyVectors.forEach(bodyVector => {
             let vector: number[] = [];
@@ -467,5 +441,24 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             vertices.push(vector);
         })
         return vertices;
+    }
+
+    private centerVectorsAround0(vectors: CANNON.Vec3[]) {
+
+        let distanceToCenter = new CANNON.Vec3(0, 0, 0);
+
+        vectors.forEach(bodyVector => {
+            distanceToCenter.x = distanceToCenter.x + bodyVector.x;
+            distanceToCenter.y = distanceToCenter.y + bodyVector.y;
+            distanceToCenter.z = distanceToCenter.z + bodyVector.z;
+        })
+
+        distanceToCenter.scale(1 / vectors.length, distanceToCenter);
+        let centerBodyVectors: CANNON.Vec3[] = [];
+
+        this.vehicleGen.bodyVectors.forEach(vector => {
+            centerBodyVectors.push(vector.vsub(distanceToCenter));
+        })
+        return centerBodyVectors;
     }
 }

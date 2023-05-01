@@ -69,6 +69,7 @@ export class PopulationManager {
     }
 
     createNextGeneration(): fitnessData[] {
+
         //TODO Selection, cross-over and mutation
         return this.fitnessData.sort((a,b) => a.fitness - b.fitness);
     }

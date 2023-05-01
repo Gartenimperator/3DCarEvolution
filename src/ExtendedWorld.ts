@@ -139,6 +139,7 @@ export class ExtendedWorld extends World {
      * @param vehicleGenome which details the vehicle.
      */
     addCar(vehicleGenome: vehicleGenome) {
+
         let vehicle = new ExtendedRigidVehicle(
             vehicleGenome,
             this.bodyMaterial,
@@ -370,7 +371,7 @@ export class ExtendedWorld extends World {
         this.copyPosition(trackStart, trackStartVisual);
 
         this.track.threeJSTrackPieces.push(trackStartVisual);
-        //this.scene.add(trackStartVisual);
+        this.scene.add(trackStartVisual);
 
         //the track always starts 10 Meters in front of the cars
         let currentPosition: CANNON.Vec3 = new CANNON.Vec3(10, 0, 0);
@@ -545,12 +546,6 @@ export class ExtendedWorld extends World {
             let z = this.roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 6));
             vehicle.bodyVectors.push(new CANNON.Vec3(x, y, z));
         }
-        vehicle.bodyVectors.push(new CANNON.Vec3(0.5, 0, 0));
-        vehicle.bodyVectors.push(new CANNON.Vec3(0, 0, 0.5));
-        vehicle.bodyVectors.push(new CANNON.Vec3(0, 0, -0.5));
-        vehicle.bodyVectors.push(new CANNON.Vec3(-0.5, 0, 0));
-        vehicle.bodyVectors.push(new CANNON.Vec3(0, 0.5, 0));
-        vehicle.bodyVectors.push(new CANNON.Vec3(0, -0.5, 0));
 
         var wheelAmount = Math.floor(Math.random() * 6);
 
