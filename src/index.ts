@@ -42,7 +42,7 @@ var worldOptions = {
     quatNormalizeFast: false,
     quatNormalizeSkip: 1
 };
-var gravity: number[] = [0,-9.82,0];
+var gravity: number[] = [0, -9.82, 0];
 const frameTime: number = 1 / 60;
 const fastForwardFrameTime: number = 1 / 20;
 const delta: number = 1; //???
@@ -85,12 +85,10 @@ let simulateThisGeneration = true;
 let isPaused = false;
 
 /**
-* Utils Function
-*/
+ * Utils Function
+ */
 
-function toString(vector: number[]): String {
-    return vector[0] + ', ' + vector[1] + ', ' + vector[2];
-}
+//TODO Use bootstrap for inputs?
 
 //HTML References
 let nextGenBtn = document.getElementById('nextGenerationBtn');
@@ -105,6 +103,12 @@ let populationInput = document.getElementById('population');
 let populationInputError = document.getElementById('populationInputError');
 let timeoutInput = document.getElementById('timeout');
 let timeoutInputError = document.getElementById('timeoutInputError');
+let mutationRateInput = document.getElementById('mutationRate');
+let mutationRateInputError = document.getElementById('mutationRateInputError');
+let trackInput = document.getElementById('trackGradients');
+let trackInputError = document.getElementById('trackGradientsInputError');
+let trackPieceLengthXInput = document.getElementById('trackPieceLengthX');
+let trackPieceLengthXInputError = document.getElementById('trackPieceLengthXInputError');
 let variablesInputConfirmation = document.getElementById('variablesInputConfirmation');
 
 /**
@@ -120,15 +124,22 @@ function updateButtons(disableStopBtn: boolean, disableContinueBtn: boolean, dis
 
 function resetInputFields() {
     hideErrorMsgs();
-    gravityInput.value = toString(gravity);
+    gravityInput.value = gravity;
     populationInput.value = populationSize;
     timeoutInput.value = timeOut;
+    mutationRateInput.value = mutationRate;
+    trackInput.value = trackGradients;
+    trackPieceLengthXInput.value = trackPieceLengthX;
     variablesInputConfirmation.hidden = true;
 }
 
 function hideErrorMsgs() {
     populationInputError.hidden = true;
     gravityInputError.hidden = true;
+    timeoutInputError.hidden = true;
+    mutationRateInputError.hidden = true;
+    trackInputError.hidden = true;
+    trackPieceLengthXInputError.hidden = true;
 }
 
 function startSimulation(population: vehicleGenome[] | undefined) {
@@ -164,14 +175,40 @@ function roundToFive(num: number) {
 function updateVariables() {
     let canUpdate = true;
 
-    let newGravity = parseFloat(gravityInput.value);
-    if (!(newGravity >= -100 && newGravity <= 100)) {
+    let newGravity = gravityInput.value.split(',');
+    if (!(newGravity.length === 3)) {
         canUpdate = false;
         gravityInputError.hidden = false;
+    } else {
+        newGravity.forEach((input, i) => {
+            let vectorInput = parseFloat(input);
+            if (!(vectorInput >= -100 && vectorInput <= 100)) {
+                canUpdate = false;
+                gravityInputError.hidden = false;
+            } else {
+                newGravity[i] = roundToFive(vectorInput);
+            }
+        })
+    }
+
+    let newTrackGradients = trackInput.value.split(',');
+    newTrackGradients.forEach((input, i) => {
+        let vectorInput = parseInt(input);
+        if (!(vectorInput >= -180 && vectorInput <= 180)) {
+            canUpdate = false;
+            trackInputError.hidden = false;
+        } else {
+            newTrackGradients[i] = vectorInput;
+        }
+    })
+
+    let newTrackPieceLengthX = parseFloat(trackPieceLengthXInput.value);
+    if (!(newTrackPieceLengthX > 0)) {
+        canUpdate = false;
+        trackPieceLengthXInputError.hidden = false;
     }
 
     let newPopulation = parseInt(populationInput.value);
-    console.log(newPopulation);
     if (!(newPopulation > 0)) {
         canUpdate = false;
         populationInputError.hidden = false;
@@ -183,10 +220,19 @@ function updateVariables() {
         timeoutInputError.hidden = false;
     }
 
+    let newMutationRate = parseFloat(mutationRateInput.value);
+    if (newMutationRate > 1 && newMutationRate < 0) {
+        canUpdate = false;
+        mutationRateInputError.hidden = false;
+    }
+
     if (canUpdate) {
-        gravity = roundToFive(newGravity);
+        gravity = newGravity;
         populationSize = newPopulation;
         timeOut = newTimeout;
+        mutationRate = newMutationRate;
+        trackGradients = newTrackGradients;
+        trackPieceLengthX = newTrackPieceLengthX;
         variablesInputConfirmation.hidden = false;
         hideErrorMsgs();
     }

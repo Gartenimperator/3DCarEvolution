@@ -25,22 +25,29 @@
 <br />
 <label for="gravity">Gravity: </label>
 <input id="gravity"/>
-<span style="color: red" id="gravityInputError" hidden="true"> Please enter a number between -100 and 100 in the form of XXX.XXXX.</span>
+<span style="color: red" id="gravityInputError" hidden="true"> Please enter a 3 dimensional vector in the form of "x, y, z" where x, y, z may be from [-100, 100] in the form xx.xxxxx.</span>
 <br />
 <label for="timeout">Timeout in Steps: </label>
 <input id="timeout"/>
 <span style="color: red" id="timeoutInputError" hidden="true"> Please enter a number larger than Zero.</span>
 <br />
+<label for="mutationRate">Mutation rate: </label>
+<input id="mutationRate"/>
+<span style="color: red" id="mutationRateInputError" hidden="true"> Please enter a number between 0 and 1.</span>
+<br />
+<label for="trackGradients">Track Gradients: </label>
+<input id="trackGradients" style="width: 100%"/>
+<span style="color: red" id="trackGradientsInputError" hidden="true"> Please enter a multidimensional vector in the form of "a, b, [...], z" where a, b, [...], z may be whole numbers from [-180, 180].</span>
+</span>
+<br />
+<label for="trackPieceLengthX">Trackpiece length: </label>
+<input id="trackPieceLengthX"/>
+<span style="color: red" id="trackPieceLengthXInputError" hidden="true"> Please enter a number larger than Zero.</span>
+</span>
+<br />
 <button id="updateVariables">Update Values for the next generation</button>
 <span id="variablesInputConfirmation" hidden="true">Updating values for the next Generation.</span>
 <br />
-<span>GravityInput</span>
-<br />
-<span>TimeOutTimer</span>
-<br />
-<span>TrackInput</span>
-<br />
-<span>TrackPieceLength</span>
 <br />
 <span>Multiple tracks(?) (Insel-Model)</span>
 <br />
@@ -48,15 +55,11 @@
 <br />
 <span>CarShowcase(?)</span>
 <br />
-<span>RestartButton</span>
-<br />
 <span>FastForward(?)</span>
 <br />
 <span>Stop FastForward(?)</span>
 <br />
 <span>StatsDisplay - Graphs of Generations</span>
-<br />
-<span>Stop Generation manually (Stuck car not disabling or other problems)</span>
 
 <script type="module" src="src/index.ts"></script>
 </body>

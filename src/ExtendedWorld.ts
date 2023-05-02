@@ -124,20 +124,19 @@ export class ExtendedWorld extends World {
      */
     initPopulation(population: vehicleGenome[]) {
         if ((this.populationManager.populationSize - population.length) >= 0) { // Population got increased by the user.
-            console.log('not Esle' + population);
+
             population.map((vehicleGenom) => {
                 this.addCar(vehicleGenom);
             });
 
-            for (var j = 0; j < this.populationManager.populationSize - population.length; j++) {
+            for (let i = 0; i < this.populationManager.populationSize - population.length; i++) {
                 this.addCar(this.createRandomCar());
             }
         } else { //Population got decreased by the user.
-            console.log('Esle' + population);
             //TODO decrease population correctly
-            population.map((vehicleGenom) => {
-                this.addCar(vehicleGenom);
-            });
+            for (let j = 0; j < this.populationManager.populationSize; j++) {
+                this.addCar(population[j]);
+            }
         }
     }
 
