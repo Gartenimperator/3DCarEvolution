@@ -96,7 +96,7 @@ export class ExtendedWorld extends World {
         groundBodyContactMaterialOptions: any,
         populationSize: number,
         id: number,
-        population: vehicleGenome[] | undefined
+        population: vehicleGenome[]
     ) {
         super(options);
         this.id = id;
@@ -111,7 +111,6 @@ export class ExtendedWorld extends World {
         this.initCarGroundContact(
             groundBodyContactMaterialOptions
         );
-
         this.initPopulation(population);
 
         //Can be removed if debugging is unnecessary.
@@ -119,18 +118,26 @@ export class ExtendedWorld extends World {
     }
 
     /**
-     * Replace the current population with a new one according to the current populationSize.
+     * Create the vehicles according to the passed vehicleGens. If the populationSize is larger than the amount of
+     * vehicleGens, then fill the slots with random vehicles. Otherwise the population has been decreased and
+     * from the passed vehicleGens only the amount of the new PopulationSize are added.
      */
-    initPopulation(population: vehicleGenome[] | undefined) {
-        if (population && population.length > 0) {
-            console.log('Existing population');
+    initPopulation(population: vehicleGenome[]) {
+        if ((this.populationManager.populationSize - population.length) >= 0) { // Population got increased by the user.
+            console.log('not Esle' + population);
             population.map((vehicleGenom) => {
                 this.addCar(vehicleGenom);
             });
-        } else {
-            for (var j = 0; j < this.populationManager.populationSize; j++) {
+
+            for (var j = 0; j < this.populationManager.populationSize - population.length; j++) {
                 this.addCar(this.createRandomCar());
             }
+        } else { //Population got decreased by the user.
+            console.log('Esle' + population);
+            //TODO decrease population correctly
+            population.map((vehicleGenom) => {
+                this.addCar(vehicleGenom);
+            });
         }
     }
 
@@ -557,9 +564,9 @@ export class ExtendedWorld extends World {
                 width: (this.roundToFour(2.5 - Math.random())), //wheel width (1.5, 2.5]
 
                 //Try to generate wheels which are touching the car
-                posX: this.roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 3)), //wheel position lengthwise
-                posY: this.roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 3)), //wheel position height
-                posZ: this.roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 3)), //wheel position width
+                posX: this.roundToFour((Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 4), //wheel position lengthwise
+                posY: this.roundToFour((Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 4), //wheel position height
+                posZ: this.roundToFour((Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 4), //wheel position width
 
 
                 material: this.wheelMaterialLowFriction,

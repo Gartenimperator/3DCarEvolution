@@ -70,7 +70,7 @@ const textureLoader = new THREE.TextureLoader();
 let trackTexture: THREE.MeshStandardMaterial;
 
 //Generic-Algorithm global variables
-var population: number = 40;
+var populationSize: number = 40;
 var amountOfWorlds: number = 1;
 
 var mutationRate = 0.01;
@@ -89,8 +89,15 @@ let nextGenBtn = document.getElementById('nextGenerationBtn');
 let stopBtn = document.getElementById("stopBtn");
 let continueBtn = document.getElementById("continueBtn");
 let newPopulationBtn = document.getElementById("startSimulationBtn"); //TODO
-let updateGravityBtn = document.getElementById('updateGravity');
+let updateVariablesBtn = document.getElementById('updateVariables');
 let autoRunCheckbox = document.getElementById('autoRunCheckbox');
+let gravityInput = document.getElementById('gravity');
+let gravityInputError = document.getElementById('gravityInputError');
+let populationInput = document.getElementById('population');
+let populationInputError = document.getElementById('populationInputError');
+let timeoutInput = document.getElementById('timeout');
+let timeoutInputError = document.getElementById('timeoutInputError');
+let variablesInputConfirmation = document.getElementById('variablesInputConfirmation');
 
 /**
  * Input listeners
@@ -103,13 +110,31 @@ function updateButtons(disableStopBtn: boolean, disableContinueBtn: boolean, dis
     nextGenBtn.disabled = disableNextGenBtn;
 }
 
+function resetInputFields() {
+    hideErrorMsgs();
+    gravityInput.value = gravity;
+    populationInput.value = populationSize;
+    timeoutInput.value = timeOut;
+    variablesInputConfirmation.hidden = true;
+}
+
+function hideErrorMsgs() {
+    populationInputError.hidden = true;
+    gravityInputError.hidden = true;
+}
+
 function startSimulation(population: vehicleGenome[] | undefined) {
 
     simulateThisGeneration = true;
     updateButtons(false, true, false, true);
+    resetInputFields();
 
     initGraphics();
-    initWorlds(population);
+    initWorlds(population?.length ? population : []);
+}
+
+function newPopulation() {
+    startSimulation([]);
 }
 
 function stopSimulation() {
@@ -128,19 +153,42 @@ function roundToFive(num: number) {
     return +(Math.round(num * 100000) / 100000);
 }
 
-function updateGravity() {
-    let value = document.getElementById('gravity').value;
-    value = parseFloat(value);
-    if (value >= -100 && value <= 100) {
-        gravity = roundToFive(value);
+function updateVariables() {
+    let canUpdate = true;
+
+    let newGravity = parseFloat(gravityInput.value);
+    if (!(newGravity >= -100 && newGravity <= 100)) {
+        canUpdate = false;
+        gravityInputError.hidden = false;
+    }
+
+    let newPopulation = parseInt(populationInput.value);
+    console.log(newPopulation);
+    if (!(newPopulation > 0)) {
+        canUpdate = false;
+        populationInputError.hidden = false;
+    }
+
+    let newTimeout = parseInt(timeoutInput.value);
+    if (!(newTimeout > 0)) {
+        canUpdate = false;
+        timeoutInputError.hidden = false;
+    }
+
+    if (canUpdate) {
+        gravity = roundToFive(newGravity);
+        populationSize = newPopulation;
+        timeOut = newTimeout;
+        variablesInputConfirmation.hidden = false;
+        hideErrorMsgs();
     }
 }
 
 nextGenBtn.addEventListener("click", simulateNextGeneration);
 stopBtn.addEventListener("click", stopSimulation);
 continueBtn.addEventListener("click", continueSimulation);
-newPopulationBtn.addEventListener("click", startSimulation); //TODO
-updateGravityBtn.addEventListener('click', updateGravity);
+newPopulationBtn.addEventListener("click", newPopulation);
+updateVariablesBtn.addEventListener('click', updateVariables);
 
 /**
  * Init Functions
@@ -205,7 +253,7 @@ function simulateNextGeneration() {
     worlds.forEach(world => {
         world.cleanUpCurrentGeneration(true);
         fitnessData = world.populationManager.createNextGeneration();
-        console.log(fitnessData);
+
     })
 
     startSimulation(fitnessData.map(fitnessData => fitnessData.vehicleGen));
@@ -214,7 +262,7 @@ function simulateNextGeneration() {
 /**
  * Initializes the worlds at the start of the genetic algorithm
  */
-function initWorlds(currentPopulation: vehicleGenome[] | undefined) {
+function initWorlds(population: vehicleGenome[]) {
     removeOldWorlds();
     for (var i = 0; i < amountOfWorlds; i++) {
         var world = new ExtendedWorld(
@@ -222,9 +270,9 @@ function initWorlds(currentPopulation: vehicleGenome[] | undefined) {
             worldOptions,
             gravity,
             groundBodyContactMaterialOptions,
-            population,
+            populationSize,
             i,
-            currentPopulation
+            population
         );
 
         //world.initTrackWithHeightfield(matrix);
@@ -306,5 +354,5 @@ function render() {
  * main
  */
 
-startSimulation(undefined);
+startSimulation([]);
 render();
