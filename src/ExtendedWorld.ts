@@ -92,7 +92,7 @@ export class ExtendedWorld extends World {
     constructor(
         scene: any,
         options: any,
-        gravity: number,
+        gravity: number[],
         groundBodyContactMaterialOptions: any,
         populationSize: number,
         id: number,
@@ -104,7 +104,7 @@ export class ExtendedWorld extends World {
         this.scene = scene;
 
         this.broadphase = new CANNON.SAPBroadphase(this);
-        this.gravity.set(0, gravity, 0);
+        this.gravity.set(gravity[0], gravity[1], gravity[2]);
 
         this.scene.add(this.cameraFocus);
 

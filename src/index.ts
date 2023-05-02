@@ -42,7 +42,7 @@ var worldOptions = {
     quatNormalizeFast: false,
     quatNormalizeSkip: 1
 };
-var gravity: number = -9.82;
+var gravity: number[] = [0,-9.82,0];
 const frameTime: number = 1 / 60;
 const fastForwardFrameTime: number = 1 / 20;
 const delta: number = 1; //???
@@ -84,6 +84,14 @@ var timeOut: number = 360;
 let simulateThisGeneration = true;
 let isPaused = false;
 
+/**
+* Utils Function
+*/
+
+function toString(vector: number[]): String {
+    return vector[0] + ', ' + vector[1] + ', ' + vector[2];
+}
+
 //HTML References
 let nextGenBtn = document.getElementById('nextGenerationBtn');
 let stopBtn = document.getElementById("stopBtn");
@@ -112,7 +120,7 @@ function updateButtons(disableStopBtn: boolean, disableContinueBtn: boolean, dis
 
 function resetInputFields() {
     hideErrorMsgs();
-    gravityInput.value = gravity;
+    gravityInput.value = toString(gravity);
     populationInput.value = populationSize;
     timeoutInput.value = timeOut;
     variablesInputConfirmation.hidden = true;
