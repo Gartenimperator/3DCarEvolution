@@ -539,13 +539,13 @@ export class ExtendedWorld extends World {
     createRandomCar(): vehicleGenome {
         //GenerateRandomCar Here
         var vehicle: vehicleGenome = {
-            baseWeight: (this.roundToFour(Math.random() * 50)), //base weigth - influences the cars calculated weight and its engine power
+            baseWeight: 10 + this.roundToFour(Math.random() * 100), //base weigth - influences the cars calculated weight and its engine power
             bodyVectors: [],
             wheels: []
         };
 
-        //Always consists of 10 vectors.
-        var bodyVectorAmount = 10;
+        //Minimum 4 vectors.
+        var bodyVectorAmount = 4 + Math.floor(Math.random() * 8);
 
         for (let i = 0; i < bodyVectorAmount; i++) {
             let x = this.roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 6));

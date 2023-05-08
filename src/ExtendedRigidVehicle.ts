@@ -41,6 +41,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     vehicleGen: vehicleGenome;
     faces: number[][];
     hasFinished: boolean = false;
+    private activeWheels: wheel[] = [];
 
     constructor(
         vehicleGen: vehicleGenome,
@@ -81,10 +82,10 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             scene.add(this.visualBody);
         }
 
-        //let onlyOuterVertices = this.removeUnusedVectorsAndUpdateGen(vertices, facesTriangulized);
+        let onlyOuterVertices = this.removeUnusedVectorsAndUpdateGen(vertices, facesTriangulized);
 
         //Faces are calculated by the algorithm from https://github.com/mauriciopoppe/quickhull3d
-        let facesNotTriangulized: number [][] = qh(vertices, {
+        let facesNotTriangulized: number [][] = qh(onlyOuterVertices, {
             skipTriangulation: true,
         });
 
@@ -92,7 +93,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         this.vehicleMass = this.vehicleMass + this.bodyMass;
 
-        this.bodyMass = 50;
+        this.bodyMass = this.vehicleGen.baseWeight;
 
         var chassisBody = new CANNON.Body({
             mass: this.bodyMass,
@@ -140,10 +141,9 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                     scene
                 );
 
-                newWheels.push(this.vehicleGen.wheels[i]);
+                this.activeWheels.push(this.vehicleGen.wheels[i]);
             }
         }
-        this.vehicleGen.wheels = newWheels;
     }
 
     /**
@@ -399,7 +399,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param trackWidth width of the track the vehicle is currently driving on.
      */
     updateSteering(trackWidth: number) {
-        this.vehicleGen.wheels.forEach((wheel, i) => {
+        this.activeWheels.forEach((wheel, i) => {
             let positionZ = this.chassisBody.position.z;
             if (wheel.canSteer && (positionZ < -trackWidth / 10 || positionZ > trackWidth / 10)) {
 

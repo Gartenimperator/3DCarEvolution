@@ -70,7 +70,7 @@ const textureLoader = new THREE.TextureLoader();
 let trackTexture: THREE.MeshStandardMaterial;
 
 //Generic-Algorithm global variables
-var populationSize: number = 40;
+var populationSize: number = 2;
 var amountOfWorlds: number = 1;
 
 var mutationRate = 0.05;
