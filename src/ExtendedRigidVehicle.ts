@@ -45,6 +45,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     constructor(
         vehicleGen: vehicleGenome,
         physicalBodyMaterial: CANNON.Material | undefined,
+        physicalWheelMaterial: CANNON.Material | undefined,
         scene: Scene | undefined,
         id: number
     ) {
@@ -52,7 +53,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         this.vehicleGen = vehicleGen;
         this.id = id;
         this.addBody(physicalBodyMaterial, scene);
-        this.addWheels(scene);
+        this.addWheels(physicalWheelMaterial, scene);
     }
 
     /**
@@ -80,10 +81,10 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             scene.add(this.visualBody);
         }
 
-        let onlyOuterVertices = this.removeUnusedVectorsAndUpdateGen(vertices, facesTriangulized);
+        //let onlyOuterVertices = this.removeUnusedVectorsAndUpdateGen(vertices, facesTriangulized);
 
         //Faces are calculated by the algorithm from https://github.com/mauriciopoppe/quickhull3d
-        let facesNotTriangulized: number [][] = qh(onlyOuterVertices, {
+        let facesNotTriangulized: number [][] = qh(vertices, {
             skipTriangulation: true,
         });
 
@@ -91,7 +92,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         this.vehicleMass = this.vehicleMass + this.bodyMass;
 
-        this.bodyMass = 100;
+        this.bodyMass = 50;
 
         var chassisBody = new CANNON.Body({
             mass: this.bodyMass,
@@ -115,16 +116,17 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     /**
      * Creates a vehicle body in CANNON according to the passed parameters and stores the fitting visual representation in this.visualBody.
      * @param scene which the wheels will be added to, if it exists.
+     * @param physicalWheelMaterial physicalMaterial of the wheel.
      * @private
      */
-    private addWheels(scene: THREE.Scene | undefined) {
+    private addWheels(physicalWheelMaterial: CANNON.Material | undefined, scene: THREE.Scene | undefined) {
         //Add wheels to the car.
         let newWheels: wheel[] = [];
         for (var i = 0; i < this.vehicleGen.wheels.length; i++) {
 
             let laysInsideShape = isPointInsideHull([this.vehicleGen.wheels[i].posX, this.vehicleGen.wheels[i].posY, this.vehicleGen.wheels[i].posZ], this.toNumberArray(this.vehicleGen.bodyVectors), this.faces);
 
-            if (laysInsideShape) {
+            if (physicalWheelMaterial != undefined && laysInsideShape) {
 
                 this.addWheelWithMesh(
                     this.vehicleGen.wheels[i].radius,
@@ -132,8 +134,9 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                     this.vehicleGen.wheels[i].posX, //length - x
                     this.vehicleGen.wheels[i].posY, //height - y
                     this.vehicleGen.wheels[i].posZ, //width - z
-                    this.vehicleGen.wheels[i].material,
+                    this.vehicleGen.wheels[i].density,
                     this.vehicleGen.wheels[i].canSteer,
+                    physicalWheelMaterial,
                     scene
                 );
 
@@ -179,6 +182,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param positionX
      * @param positionY
      * @param positionZ
+     * @param density of the wheel.
      * @param physicalWheelMaterial of the wheel. If the param is undefined no physical CANNON.Body will be created.
      * @param canSteer defines if the wheel is steerable or not.
      * @param scene the wheel is placed inside of. If the param is undefined no visual THREE.Mesh will be created.
@@ -189,13 +193,14 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         positionX: number,
         positionY: number,
         positionZ: number,
-        physicalWheelMaterial: CANNON.Material | undefined,
+        density: number,
         canSteer: boolean,
+        physicalWheelMaterial: CANNON.Material,
         scene: THREE.Scene | undefined
     ) {
         //Add wheel physical body
-        if (physicalWheelMaterial != undefined) {
-            this.addPhysicalWheel(radius, width, positionX, positionY, positionZ, physicalWheelMaterial, canSteer);
+        if (physicalWheelMaterial) {
+            this.addPhysicalWheel(radius, width, positionX, positionY, positionZ, density, physicalWheelMaterial, canSteer);
         }
 
         //Add wheel visual body
@@ -211,6 +216,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param positionX
      * @param positionY
      * @param positionZ
+     * @param density
      * @param physicalWheelMaterial of the wheel.
      * @param canSteer defines if the wheel is steerable or not.
      * @private
@@ -220,10 +226,11 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                              positionX: number,
                              positionY: number,
                              positionZ: number,
+                             density: number,
                              physicalWheelMaterial: CANNON.Material,
                              canSteer: boolean) {
         const wheelVolume = Math.PI * width * (radius * radius);
-        const wheelMass = Math.max(1, wheelVolume * 3);
+        const wheelMass = Math.max(1, wheelVolume * density);
 
         let wheelBody = new CANNON.Body({
             mass: wheelMass,
@@ -237,7 +244,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         const rotateParallelToXAxis = new CANNON.Quaternion().setFromEuler(Math.PI / 2, 0, 0);
         const shape = new CANNON.Cylinder(radius, radius, width, 25);
         wheelBody.addShape(shape, new CANNON.Vec3(), rotateParallelToXAxis);
-        wheelBody.angularDamping = 0.6;
+        wheelBody.angularDamping = 0.5;
 
         this.addWheel({
             body: wheelBody,
@@ -247,8 +254,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         this.vehicleMass = this.vehicleMass + wheelMass;
 
-        let wheelForce = Math.max(5, Math.min(this.bodyMass * wheelMass, 1000));
-
+        let wheelForce = Math.max(5, Math.min((this.bodyMass + wheelMass) * 10, wheelMass * 10));
         if (canSteer) {
             wheelForce = wheelForce * 2 / 3; //Steerable wheels get a small punishment by power reduction.
         }
@@ -386,30 +392,6 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         let mesh = new THREE.Mesh(geometry, this.bodyMaterial);
         mesh.add(lines);
         return mesh;
-    }
-
-    /**
-     * Returns the vehicle genome as an Array for the crossover and mutation process.
-     */
-    toArray(): number[] {
-        let genAsArray: number[] = [];
-        genAsArray.push(this.vehicleGen.baseWeight);
-        this.vehicleGen.bodyVectors.forEach(bodyVector => {
-            genAsArray.push(bodyVector.x);
-            genAsArray.push(bodyVector.y);
-            genAsArray.push(bodyVector.z);
-            //TODO Material problem
-        })
-        this.vehicleGen.wheels.forEach(wheel => {
-            genAsArray.push(wheel.radius);
-            genAsArray.push(wheel.width);
-            genAsArray.push(wheel.posX);
-            genAsArray.push(wheel.posY);
-            genAsArray.push(wheel.posZ);
-            //TODO Material problem
-        })
-
-        return genAsArray;
     }
 
     /**

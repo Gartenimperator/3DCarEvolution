@@ -73,9 +73,11 @@ let trackTexture: THREE.MeshStandardMaterial;
 var populationSize: number = 40;
 var amountOfWorlds: number = 1;
 
-var mutationRate = 0.01;
+var mutationRate = 0.05;
 
 var timeOut: number = 360;
+
+var generationCounter = 0;
 
 /**
  * Controller variables
@@ -302,21 +304,22 @@ function initGraphics() {
 }
 
 function simulateNextGeneration() {
-    let fitnessData: any;
+    let nextGeneration: vehicleGenome[];
 
     worlds.forEach(world => {
         world.cleanUpCurrentGeneration(true);
-        fitnessData = world.populationManager.createNextGeneration();
-
+        nextGeneration = world.populationManager.createNextGeneration(mutationRate);
     })
 
-    startSimulation(fitnessData.map(fitnessData => fitnessData.vehicleGen));
+    startSimulation(nextGeneration);
 }
 
 /**
  * Initializes the worlds at the start of the genetic algorithm
  */
 function initWorlds(population: vehicleGenome[]) {
+    generationCounter++;
+    console.log(generationCounter);
     removeOldWorlds();
     for (var i = 0; i < amountOfWorlds; i++) {
         var world = new ExtendedWorld(
@@ -370,7 +373,7 @@ function updatePhysics() {
             world.updatePhysicsAndScene(frameTime, timeOut);
 
             //uncomment to view debug mode
-            //world.cannonDebugRenderer.update();
+            world.cannonDebugRenderer.update();
         } else {
             console.log('Disabling world with id: ' + world.id);
             inactiveWorlds.set(world.id, world);
