@@ -82,14 +82,17 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             scene.add(this.visualBody);
         }
 
-        let onlyOuterVertices = this.removeUnusedVectorsAndUpdateGen(vertices, facesTriangulized);
 
-        //Faces are calculated by the algorithm from https://github.com/mauriciopoppe/quickhull3d
+        /*let onlyOuterVertices = this.removeUnusedVectorsAndUpdateGen(vertices, facesTriangulized);
+
+        Faces are calculated by the algorithm from https://github.com/mauriciopoppe/quickhull3d
         let facesNotTriangulized: number [][] = qh(onlyOuterVertices, {
             skipTriangulation: true,
         });
 
-        this.faces = facesNotTriangulized;
+         */
+
+        this.faces = facesTriangulized;
 
         this.vehicleMass = this.vehicleMass + this.bodyMass;
 
@@ -111,6 +114,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             });
             chassisBody.addShape(chassisShapeComplex);
         })
+
         this.chassisBody = chassisBody;
     }
 
@@ -171,7 +175,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             }
         })
 
-        this.vehicleGen.bodyVectors = outerBodyVectors;
+        //this.vehicleGen.bodyVectors = outerBodyVectors;
         return convertedVertices;
     }
 

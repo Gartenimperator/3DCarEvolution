@@ -72,26 +72,23 @@ export class PopulationManager {
 
     createNextGeneration(mutationRate: number): vehicleGenome[] {
         this.mutationRate = mutationRate;
-        let fitnessDataSelection = this.fitnessData.sort((a, b) => a.fitness - b.fitness);
 
         let tournamentSelection: vehicleGenome[] = [];
         let tournamentSelection2: fitnessData[] = [];
         let newGeneration: vehicleGenome[] = [];
 
-        fitnessDataSelection.forEach((carA, carAPlacement) => {
-            let carBPlacement = Math.floor(Math.random() * fitnessDataSelection.length);
+        this.fitnessData.forEach((carA, carAPlacement) => {
+            let carBPlacement = Math.floor(Math.random() * this.fitnessData.length);
             if (carBPlacement < carAPlacement) {
                 tournamentSelection.push(carA.oldVehicleGen);
                 tournamentSelection2.push(carA);
             } else {
-                tournamentSelection.push(fitnessDataSelection[carBPlacement].oldVehicleGen);
-                tournamentSelection2.push(fitnessDataSelection[carBPlacement]);
+                tournamentSelection.push(this.fitnessData[carBPlacement].oldVehicleGen);
+                tournamentSelection2.push(this.fitnessData[carBPlacement]);
             }
         });
 
-        console.log(tournamentSelection2);
         console.log(tournamentSelection2.sort((a, b) => a.fitness - b.fitness));
-
 
         for (let i = 0; i < this.populationSize / 2; i++) {
             let parent1 = tournamentSelection[Math.floor(Math.random() * this.populationSize)];

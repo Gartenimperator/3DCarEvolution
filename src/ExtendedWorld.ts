@@ -564,9 +564,9 @@ export class ExtendedWorld extends World {
                 width: (this.roundToFour(2.5 - Math.random())), //wheel width (1.5, 2.5]
 
                 //Try to generate wheels which are touching the car
-                posX: this.roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 3), //wheel position lengthwise
-                posY: this.roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 3), //wheel position height
-                posZ: this.roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 3), //wheel position width
+                posX: this.roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 4), //wheel position lengthwise
+                posY: this.roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 4), //wheel position height
+                posZ: this.roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 4), //wheel position width
 
 
                 density: Math.ceil(Math.random() * 10),
