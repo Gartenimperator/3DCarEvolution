@@ -258,7 +258,13 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         this.vehicleMass = this.vehicleMass + wheelMass;
 
-        let wheelForce = Math.max(5, Math.min((this.bodyMass + wheelMass) * 10, wheelMass * 10));
+        let wheelForce: number = 0;
+        if (wheelMass < 100) {
+            wheelForce = 0.1 * wheelMass * wheelMass;
+        } else {
+            wheelForce = Math.log2(this.bodyMass) * wheelMass * 2 + 100;
+        }
+
         if (canSteer) {
             wheelForce = wheelForce * 2 / 3; //Steerable wheels get a small punishment by power reduction.
         }

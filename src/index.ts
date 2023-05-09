@@ -332,7 +332,7 @@ function initWorlds(population: vehicleGenome[]) {
             population
         );
 
-        //world.initTrackWithHeightfield(matrix);
+        //world.initTrackWithHeightfield([]);
         world.initTrackWithGradients(trackGradients, trackPieceLengthX, trackTexture);
         activeWorlds.set(world.id, world);
         worlds.push(world);
