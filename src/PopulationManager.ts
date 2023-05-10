@@ -96,27 +96,16 @@ export class PopulationManager {
             wheelCounter = wheelCounter + car.wheels.length;
             bodyCounter = bodyCounter + car.bodyVectors.length;
         })
-        console.log('Wheel1:' + wheelCounter);
-        console.log('body1:' + bodyCounter);
-        wheelCounter = 0;
-        bodyCounter = 0;
-        console.log(tournamentSelection2.sort((a, b) => a.fitness - b.fitness));
 
         for (let i = 0; i < this.populationSize / 2; i++) {
             let parent1 = tournamentSelection[Math.floor(Math.random() * this.populationSize)];
             let parent2 = tournamentSelection[Math.floor(Math.random() * this.populationSize)];
 
             let children = this.crossOver(parent1, parent2);
-            wheelCounter = wheelCounter + children[0].wheels.length;
-            wheelCounter = wheelCounter + children[1].wheels.length;
-            bodyCounter = bodyCounter + children[0].bodyVectors.length;
-            bodyCounter = bodyCounter + children[1].bodyVectors.length;
             newGeneration.push(this.mutateVehicle(children[0]));
             newGeneration.push(this.mutateVehicle(children[1]));
         }
 
-        console.log('Wheel2:' + wheelCounter);
-        console.log('body2:' + bodyCounter);
         return newGeneration;
     }
 
@@ -248,7 +237,7 @@ export class PopulationManager {
      * @private
      */
     private calculateFitness(stepNumber: number, hasFinished: boolean, distance: number): number {
-        return distance + (hasFinished ? 100000/stepNumber : 0);
+        return hasFinished ? distance + 2 * distance * 100000 / stepNumber : distance;
     }
 
     /**

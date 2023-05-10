@@ -4,7 +4,6 @@
 
 import Chart, {ChartData} from "chart.js/auto";
 import {fitnessData} from "./PopulationManager";
-import {vehicleGenome} from "./ExtendedWorld";
 
 export class DataStore {
 
@@ -17,7 +16,7 @@ export class DataStore {
         this.newChart();
     }
 
-    pushData(fitnessData: fitnessData[]) {
+    pushData(fitnessData: fitnessData[], currentGen: number) {
         let sortedFitnessData = fitnessData.sort((a, b) => b.fitness - a.fitness);
         this.fitnessDataStore.push(sortedFitnessData);
 
@@ -28,10 +27,9 @@ export class DataStore {
             timeInSteps: 0
         };
 
-        let nextGen = this.chart.data.labels[this.chart.data.labels.length - 1] + 1;
-        this.chart.data.labels.push(nextGen);
+        this.chart.data.labels.push(currentGen);
 
-        if (nextGen - 1 === 0) {
+        if (currentGen === 0) {
             this.chart.data.datasets.push({
                 borderColor: 'darkblue'
             });
@@ -40,7 +38,7 @@ export class DataStore {
         sortedFitnessData.forEach((data, i) => {
             if (this.chart.data.datasets[i + 1]) {
                 this.chart.data.datasets[i + 1].data.push({
-                    x: nextGen - 1,
+                    x: currentGen,
                     fitnessData: {
                         distanceTraveled: data.distanceTraveled,
                         hasFinished: data.hasFinished,
@@ -52,7 +50,7 @@ export class DataStore {
                 this.chart.data.datasets.push(
                     {
                         data: [{
-                            x: nextGen - 1,
+                            x: currentGen,
                             fitnessData: {
                                 distanceTraveled: data.distanceTraveled,
                                 hasFinished: data.hasFinished,
@@ -76,7 +74,7 @@ export class DataStore {
 
         let size = fitnessData.length;
         this.chart.data.datasets[0].data.push({
-            x: nextGen - 1,
+            x: currentGen,
             fitnessData: {
                 distanceTraveled: median.distanceTraveled / size,
                 hasFinished: median.hasFinished / size,
@@ -142,7 +140,5 @@ export class DataStore {
                 },
             }
         );
-
-        this.chart.data.labels = [0];
     }
 }

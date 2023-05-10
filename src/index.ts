@@ -70,14 +70,14 @@ const textureLoader = new THREE.TextureLoader();
 let trackTexture: THREE.MeshStandardMaterial;
 
 //Generic-Algorithm global variables
-var populationSize: number = 80;
+var populationSize: number = 65;
 var amountOfWorlds: number = 1;
 
 var mutationRate = 0.05;
 
 var timeOut: number = 300;
 
-var generationCounter = 0;
+var currentGen = 0;
 
 /**
  * Controller variables
@@ -150,14 +150,14 @@ function hideErrorMsgs() {
     trackPieceLengthXInputError.hidden = true;
 }
 
-function startSimulation(population: vehicleGenome[] | undefined) {
+function startSimulation(population: vehicleGenome[]) {
 
     simulateThisGeneration = true;
     updateButtons(false, true, false, true);
     resetInputFields();
 
     initGraphics();
-    initWorlds(population?.length ? population : []);
+    initWorlds(population);
 }
 
 function newPopulation() {
@@ -317,21 +317,25 @@ function simulateNextGeneration() {
     worlds.forEach(world => {
         world.cleanUpCurrentGeneration(true);
         if (world.render) {
-            dataStore.pushData(world.populationManager.fitnessData);
+            dataStore.pushData(world.populationManager.fitnessData, currentGen);
         }
         nextGeneration = world.populationManager.createNextGeneration(mutationRate);
     })
 
+    currentGen++;
     startSimulation(nextGeneration);
 }
 
 /**
- * Initializes the worlds at the start of the genetic algorithm
+ * Initializes the worlds at the start of each step of the genetic algorithm
  */
 function initWorlds(population: vehicleGenome[]) {
-    generationCounter++;
-    console.log(generationCounter);
     removeOldWorlds();
+
+    if (population.length === 0) {
+        currentGen = 0;
+    }
+
     for (var i = 0; i < amountOfWorlds; i++) {
         var world = new ExtendedWorld(
             scene,
@@ -386,7 +390,6 @@ function updatePhysics() {
             //uncomment to view debug mode
             //world.cannonDebugRenderer.update();
         } else {
-            console.log('Disabling world with id: ' + world.id);
             inactiveWorlds.set(world.id, world);
             activeWorlds.delete(world.id);
 
