@@ -148,6 +148,36 @@ export class ExtendedWorld extends World {
 
         this.populationManager.addCar(vehicle);
         vehicle.addToWorld(this);
+
+        let vertices: CANNON.Vec3[] = [
+            new CANNON.Vec3(1.6914, 0.524775, 1.102675), // 1
+            new CANNON.Vec3(1.7181, 0.581274, 2.075575), // 2
+            new CANNON.Vec3(-4.1381, -1.222925, -4.314225), // 3
+            new CANNON.Vec3(0.7285, 0.116874, 1.135975), // 4
+        ];
+
+        let faces = [
+            [2, 1, 0],
+            [3, 1, 2],
+            [3, 0, 1],
+            [3, 2, 0]];
+
+        let chassisShapeComplex = new CANNON.ConvexPolyhedron({
+            vertices: vertices,
+            faces: faces
+        });
+
+        let chassisBody = new CANNON.Body({
+            mass: 10,
+            position: new CANNON.Vec3(0, 10, 0), //cars spawn 10 meters in the air.
+            material: new CANNON.Material('test'),
+            collisionFilterGroup: 1,
+            collisionFilterMask: 2 | 4
+        });
+
+        chassisBody.addShape(chassisShapeComplex);
+        this.addBody(chassisBody);
+
     }
 
     /**
@@ -357,6 +387,7 @@ export class ExtendedWorld extends World {
             mass: 0, // mass = 0 makes the body static
             material: this.groundMaterial,
             shape: new CANNON.Box(new CANNON.Vec3(10, 1, 50)),
+            position: new CANNON.Vec3(0,-10,2),
             collisionFilterGroup: Groups.GROUP2,
             collisionFilterMask: Groups.GROUP1
         });

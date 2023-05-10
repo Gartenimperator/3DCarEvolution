@@ -62,48 +62,38 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         }
 
         let body: CANNON.Vec3[] = [
+            new CANNON.Vec3(1.6914, 0.524775, 1.102675), // 1
+            new CANNON.Vec3(1.7181, 0.581274, 2.075575), // 2
+            new CANNON.Vec3(-4.1381, -1.222925, -4.314225), // 3
+            new CANNON.Vec3(0.7285, 0.116874, 1.135975), // 4
+        ];
+
+        let body2 = [
             new CANNON.Vec3(3.6404, -4.1438, 1.5658), // 1
             new CANNON.Vec3(3.6672, -4.0873, 2.5387), // 2
             new CANNON.Vec3(-2.1891, -5.8915, -3.8511), // 3
             new CANNON.Vec3(2.6775, -4.5517, 1.5991), // 4
-            /*
-            new CANNON.Vec3(0.5, 0, 0),
-            new CANNON.Vec3(0, 0, 0.5),
-            new CANNON.Vec3(0, 0, -0.5),
-            new CANNON.Vec3(-0.5, 0, 0),
-            new CANNON.Vec3(0, 0.5, 0),
-            new CANNON.Vec3(0, -0.5, 0)
+            ]
 
-             */
-        ];
+        let faces = [
+            [2, 1, 0],
+            [3, 0, 1],
+            [3, 2, 0],
+            [3, 1, 2],];
 
-        let body2: CANNON.Vec3[] = [
-            new CANNON.Vec3(3.6404, -4.1438, 1.5658),
-            new CANNON.Vec3(-5.7782, -1.1113, 5.6078),
-            new CANNON.Vec3(-1.0519, 3.85, -2.7965),
-            new CANNON.Vec3(2.6775, -4.7, 1.5991), // change -4.5517 to -4.6517 and the problem doesnt ocour :)
-            new CANNON.Vec3(2.6775, -4.7, -1.5991), // change -4.5517 to -4.6517 and the problem doesnt ocour :)
-            new CANNON.Vec3(2.6775, -5, 1.5991), // change -4.5517 to -4.6517 and the problem doesnt ocour :)
-            new CANNON.Vec3(-1.9583, -1.5233, 3.884),
-            new CANNON.Vec3(0.5224, -4.1875, -3.0021),
-            new CANNON.Vec3(3.6672, -4.0873, 2.5387),
-            new CANNON.Vec3(-2.1891, -5.8915, -3.8511),
-            new CANNON.Vec3(-2.1891, -5.8915, -7.8511),
-            new CANNON.Vec3(-2.1891, -5.8915, -10.8511),
-            /*
-            new CANNON.Vec3(0.5, 0, 0),
-            new CANNON.Vec3(0, 0, 0.5),
-            new CANNON.Vec3(0, 0, -0.5),
-            new CANNON.Vec3(-0.5, 0, 0),
-            new CANNON.Vec3(0, 0.5, 0),
-            new CANNON.Vec3(0, -0.5, 0)
+        //body = body2;
 
-             */
-        ];
+        this.vehicleGen.bodyVectors = body;
+
+        console.log(this.centerVectorsAround0(body));
+
+        //body = this.centerVectorsAround0(body);
 
         this.vehicleGen.bodyVectors = body;
 
         let vertices = this.toNumberArray(this.vehicleGen.bodyVectors);
+        console.log('vertices:');
+        console.log(vertices);
         let vertices2 = this.toNumberArray(this.vehicleGen.bodyVectors);
 
         let facesTriangulized: number [][] = qh(vertices, {
@@ -121,38 +111,54 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         //CANNON.Vec3
 
-        let onlyOuterVertices = this.removeUnusedVectorsAndUpdateGen(vertices2, facesTriangulized);
+        //let onlyOuterVertices = this.removeUnusedVectorsAndUpdateGen(vertices2, facesTriangulized);
 
         //Faces are calculated by the algorithm from https://github.com/mauriciopoppe/quickhull3d
-        let facesNotTriangulized: number [][] = qh(onlyOuterVertices, {
+        let facesNotTriangulized: number [][] = qh(vertices, {
             skipTriangulation: true,
         });
 
         this.faces = facesNotTriangulized;
+        console.log(facesNotTriangulized);
 
         //Shape for the physical vehicle body.
-        let chassisShapeComplex = new CANNON.ConvexPolyhedron({
-            vertices: this.vehicleGen.bodyVectors,
-            faces: facesNotTriangulized
-        });
+        console.log(vertices);
 
         this.vehicleMass = this.vehicleMass + this.bodyMass;
 
-        console.log(chassisShapeComplex.volume());
 
-        this.bodyMass = 100;
+        let chassisShapeComplex = new CANNON.ConvexPolyhedron({
+            vertices: body,
+            faces: facesNotTriangulized
+        });
+        console.log(chassisShapeComplex.pointIsInside( new CANNON.Vec3(0,0,0)));
+        console.log(chassisShapeComplex);
 
+
+        this.bodyMass = 10;
         var chassisBody = new CANNON.Body({
-            mass: this.bodyMass,
+            mass: 10,
             position: new CANNON.Vec3(0, 10, 0), //cars spawn 10 meters in the air.
             material: bodyMaterial,
             collisionFilterGroup: Groups.GROUP1,
             collisionFilterMask: Groups.GROUP2 | Groups.GROUP3
         });
         chassisBody.addShape(chassisShapeComplex);
+
+        var body3 = new CANNON.Body({
+            mass: this.bodyMass,
+            position: new CANNON.Vec3(0, 10, 0), //cars spawn 10 meters in the air.
+            material: bodyMaterial,
+            collisionFilterGroup: Groups.GROUP1,
+            collisionFilterMask: Groups.GROUP2 | Groups.GROUP3
+        });
+        body3.addShape(chassisShapeComplex);
+
         this.chassisBody = chassisBody;
 
-        console.log(this.chassisBody.boundingRadius);
+        console.log(bodyMaterial);
+        console.log('body:');
+        console.log(this.chassisBody);
     }
 
     /**
@@ -468,4 +474,25 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         })
         return vertices;
     }
+
+    private centerVectorsAround0(vectors: CANNON.Vec3[]) {
+
+        let distanceToCenter = new CANNON.Vec3(0, 0, 0);
+
+        vectors.forEach(bodyVector => {
+            distanceToCenter.x = distanceToCenter.x + bodyVector.x;
+            distanceToCenter.y = distanceToCenter.y + bodyVector.y;
+            distanceToCenter.z = distanceToCenter.z + bodyVector.z;
+        })
+
+        distanceToCenter.scale(1 / vectors.length, distanceToCenter);
+        console.log(distanceToCenter);
+        let centerBodyVectors: CANNON.Vec3[] = [];
+
+        this.vehicleGen.bodyVectors.forEach(vector => {
+            centerBodyVectors.push(vector.vsub(distanceToCenter).vadd(new CANNON.Vec3(0,0,0)));
+        })
+        return centerBodyVectors;
+    }
+
 }
