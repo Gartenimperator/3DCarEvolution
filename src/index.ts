@@ -284,7 +284,7 @@ function initGraphics() {
     materialDynamic = new THREE.MeshPhongMaterial({color: 0xfca400});
     materialStatic = new THREE.MeshPhongMaterial({color: 0x999999});
 
-    if (container !== null) {
+    if (container != null) {
         container.innerHTML = '';
 
         //See link at the top, as to why I do this
@@ -316,9 +316,7 @@ function simulateNextGeneration() {
 
     worlds.forEach(world => {
         world.cleanUpCurrentGeneration(true);
-        if (world.render) {
-            dataStore.pushData(world.populationManager.fitnessData, currentGen);
-        }
+        dataStore.pushData(world.populationManager.fitnessData, currentGen);
         nextGeneration = world.populationManager.createNextGeneration(mutationRate);
     })
 
@@ -344,7 +342,8 @@ function initWorlds(population: vehicleGenome[]) {
             groundBodyContactMaterialOptions,
             populationSize,
             i,
-            population
+            population,
+            true
         );
 
         //world.initTrackWithHeightfield([]);
@@ -385,7 +384,11 @@ function updatePhysics() {
         //only update worlds with active cars
         if (world.isActive()) {
 
-            world.updatePhysicsAndScene(frameTime, timeOut);
+            while (false && !world.render && world.isActive()) {
+                world.extendedStep(frameTime, timeOut);
+            }
+
+            world.extendedStep(frameTime, timeOut);
 
             //uncomment to view debug mode
             //world.cannonDebugRenderer.update();
@@ -412,7 +415,6 @@ function render() {
 
     if (activeWorlds.size > 0 && simulateThisGeneration) {
         updatePhysics();
-
     } else if (autoRunCheckbox.checked && simulateThisGeneration) {
         simulateNextGeneration();
     }

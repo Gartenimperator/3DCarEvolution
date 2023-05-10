@@ -20,23 +20,23 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     id: number;
     wheelMaterial = new THREE.MeshLambertMaterial({
         color: 0x191919,
-        transparent: true,
-        opacity: 1.0
+        //transparent: true,
+        //opacity: 1.0
     });
     wheelHoodMaterial = new THREE.MeshPhongMaterial({
         color: 0xC0C0C0,
-        transparent: true,
-        opacity: 1.0
+        //transparent: true,
+        //opacity: 1.0
     });
     bodyMaterial = new THREE.MeshBasicMaterial({
         color: 0xC4151C,
-        transparent: true,
-        opacity: 1.0
+        //transparent: true,
+        //opacity: 1.0
     });
     lineMaterial = new THREE.LineBasicMaterial({
         color: 0x0000ff,
-        transparent: true,
-        opacity: 1.0
+        //transparent: true,
+        //opacity: 1.0
     });
     vehicleGen: vehicleGenome;
     faces: number[][];
@@ -360,14 +360,13 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      */
     disable() {
         if (this.visualBody.material instanceof Material) {
-            this.visualBody.material.opacity = 0.3;
-            this.lineMaterial.opacity = 0.4;
-
+            //this.visualBody.material.opacity = 0.3;
+            //this.lineMaterial.opacity = 0.4;
         }
 
         this.wheelMeshes.forEach(wheel => {
             if (wheel.material instanceof Material) {
-                wheel.material.opacity = 0.4;
+                //wheel.material.opacity = 0.4;
             }
         });
     }

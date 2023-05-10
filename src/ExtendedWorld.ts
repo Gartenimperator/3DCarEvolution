@@ -76,7 +76,7 @@ export class ExtendedWorld extends World {
         trackWidth: 0,
         finishPosition: new CANNON.Vec3(0, 0, 0)
     };
-    render: boolean = true;
+    render: boolean = false;
     disabled: boolean = false;
 
     /**
@@ -88,6 +88,7 @@ export class ExtendedWorld extends World {
      * @param populationSize
      * @param id
      * @param population
+     * @param render
      */
     constructor(
         scene: any,
@@ -96,12 +97,14 @@ export class ExtendedWorld extends World {
         groundBodyContactMaterialOptions: any,
         populationSize: number,
         id: number,
-        population: vehicleGenome[]
+        population: vehicleGenome[],
+        render: boolean
     ) {
         super(options);
         this.id = id;
         this.populationManager = new PopulationManager(populationSize);
         this.scene = scene;
+        this.render = render;
 
         this.broadphase = new CANNON.SAPBroadphase(this);
         this.gravity.set(gravity[0], gravity[1], gravity[2]);
@@ -150,7 +153,7 @@ export class ExtendedWorld extends World {
             vehicleGenome,
             this.bodyMaterial,
             this.wheelMaterialHighFriction,
-            this.scene,
+            this.render ? this.scene : undefined,
             this.carIdCounter++
         );
 
@@ -168,7 +171,7 @@ export class ExtendedWorld extends World {
                 vehicleGenome,
                 this.bodyMaterial,
                 this.wheelMaterialHighFriction,
-                this.scene,
+                this.render ? this.scene : undefined,
                 this.carIdCounter++
             );
 
@@ -180,12 +183,13 @@ export class ExtendedWorld extends World {
     /**
      * Calculate a step inside the physicsengine and update the visuals for the cars accordingly.
      * FrameTime and the timeOut are passed as arguments to allow dynamic changes to these values.
-     * @param frameTime specifies the amount of steps per frame.
+     * @param frameTime specifies the amount of steps per second.
      * @param timeOut the max amout of timeOut a car can have.
      */
-    updatePhysicsAndScene(frameTime: number, timeOut: number) {
+    extendedStep(frameTime: number, timeOut: number) {
         //world.step(frameTime, delta, 1);
         this.step(frameTime);
+        console.log(this.stepnumber);
 
         if (this.render) {
 
@@ -207,7 +211,7 @@ export class ExtendedWorld extends World {
             });
 
             //Update the camera position.
-            var leadingPos = this.populationManager.leadingCar.chassisBody.position;
+            let leadingPos = this.populationManager.leadingCar.chassisBody.position;
             this.cameraFocus.position.set(leadingPos.x, leadingPos.y, leadingPos.z);
 
         } else {
@@ -218,6 +222,9 @@ export class ExtendedWorld extends World {
                 car.updateSteering(this.track.trackWidth);
             });
 
+            if (this.populationManager.activeCars.size === 0) {
+                this.disabled = true;
+            }
         }
     }
 
@@ -238,7 +245,7 @@ export class ExtendedWorld extends World {
         car.visualBody.position.set(posBody.x, posBody.y, posBody.z);
         car.visualBody.quaternion.set(quatBody.x, quatBody.y, quatBody.z, quatBody.w);
 
-        for (var i = 0; i < car.wheelBodies.length; i++) {
+        for (let i = 0; i < car.wheelBodies.length; i++) {
             const posWheel = car.wheelBodies[i].position;
             const quatWheel = car.wheelBodies[i].quaternion;
             car.wheelMeshes[i].position.set(posWheel.x, posWheel.y, posWheel.z);
@@ -275,7 +282,7 @@ export class ExtendedWorld extends World {
     initCarGroundContact(bodyGroundOptions: any) {
         this.defaultContactMaterial.friction = 1;
 
-        var wheelGroundOptions = {
+        let wheelGroundOptions = {
             friction: 0.4,
             restitution: 0.3,
             contactEquationRelaxation: 3,
@@ -283,27 +290,27 @@ export class ExtendedWorld extends World {
         };
 
         wheelGroundOptions.friction = 0.2;
-        var wheelGroundContactMaterialLowFriction = new CANNON.ContactMaterial(
+        let wheelGroundContactMaterialLowFriction = new CANNON.ContactMaterial(
             this.wheelMaterialLowFriction,
             this.groundMaterial,
             wheelGroundOptions
         );
 
         wheelGroundOptions.friction = 0.5;
-        var wheelGroundContactMaterialMediumFriction = new CANNON.ContactMaterial(
+        let wheelGroundContactMaterialMediumFriction = new CANNON.ContactMaterial(
             this.wheelMaterialMediumFriction,
             this.groundMaterial,
             wheelGroundOptions
         );
 
         wheelGroundOptions.friction = 0.8;
-        var wheelGroundContactMaterialHighFriction = new CANNON.ContactMaterial(
+        let wheelGroundContactMaterialHighFriction = new CANNON.ContactMaterial(
             this.wheelMaterialHighFriction,
             this.groundMaterial,
             wheelGroundOptions
         );
 
-        var bodyGroundContactMaterial = new CANNON.ContactMaterial(
+        let bodyGroundContactMaterial = new CANNON.ContactMaterial(
             this.bodyMaterial,
             this.groundMaterial,
             bodyGroundOptions
@@ -349,23 +356,18 @@ export class ExtendedWorld extends World {
      */
     initTrackWithGradients(gradients: number[], length: number, trackTexture: THREE.MeshStandardMaterial) {
 
-        //Remove the existing track
-        this.track.trackPieces.forEach((trackPiece) => {
-            this.removeBody(trackPiece);
-        });
-
-        var rotateParallelToZAxis: CANNON.Quaternion;
-
-        var trackPieceShape = new CANNON.Box(new CANNON.Vec3(length, 1, 50));
-        var lowestTrackPoint: number = 0;
-
         this.track.trackWidth = 50;
+
+        let rotateParallelToZAxis: CANNON.Quaternion;
+
+        let trackPieceShape = new CANNON.Box(new CANNON.Vec3(length, 0.5, 50));
+        let lowestTrackPoint: number = 0;
 
         //The Track always starts on a 10m * 50m plane to allow the cars to spawn correctly
         let trackStart = new CANNON.Body({
             mass: 0, // mass = 0 makes the body static
             material: this.groundMaterial,
-            shape: new CANNON.Box(new CANNON.Vec3(10, 1, 50)),
+            shape: new CANNON.Box(new CANNON.Vec3(10, 0.5, 50)),
             collisionFilterGroup: Groups.GROUP2,
             collisionFilterMask: Groups.GROUP1
         });
@@ -373,13 +375,15 @@ export class ExtendedWorld extends World {
         this.addBody(trackStart);
         this.track.trackPieces.push(trackStart);
 
-        var geometry = new THREE.BoxGeometry(10 * 2, 1 * 2, 50 * 2); // double chasis shape
-        let trackStartVisual = new THREE.Mesh(geometry, trackTexture);
+        if (this.render) {
+            let geometry = new THREE.BoxGeometry(10 * 2, 1, 50 * 2); // double chasis shape
+            let trackStartVisual = new THREE.Mesh(geometry, trackTexture);
 
-        this.copyPosition(trackStart, trackStartVisual);
+            this.copyPosition(trackStart, trackStartVisual);
 
-        this.track.threeJSTrackPieces.push(trackStartVisual);
-        this.scene.add(trackStartVisual);
+            this.track.threeJSTrackPieces.push(trackStartVisual);
+            this.scene.add(trackStartVisual);
+        }
 
         //the track always starts 10 Meters in front of the cars
         let currentPosition: CANNON.Vec3 = new CANNON.Vec3(10, 0, 0);
@@ -387,14 +391,14 @@ export class ExtendedWorld extends World {
         //Construct the track by placing the track pieces at the correct positions according to the gradients
         gradients.forEach((gradient) => {
             //Calculate new Position via sum of interior angles, law of sin and law of cos
-            var beta: number = 90 - gradient;
+            let beta: number = 90 - gradient;
 
             //Law of Sin - calculate the distance (y-distance) to the middle of the to be placed track piece
-            var yDist =
+            let yDist =
                 (Math.sin((gradient * Math.PI) / 180) * length) / Math.sin((90 * Math.PI) / 180);
 
             //Law of Cos - calculate the distance (x-distance) to the middle of the to be placed track piece
-            var xDist = Math.sqrt(
+            let xDist = Math.sqrt(
                 yDist * yDist - 2 * length * yDist * Math.cos((beta * Math.PI) / 180) + length * length
             );
 
@@ -407,7 +411,7 @@ export class ExtendedWorld extends World {
             currentPosition.x = currentPosition.x + xDist;
             currentPosition.y = currentPosition.y + yDist;
 
-            var trackPiece = new CANNON.Body({
+            let trackPiece = new CANNON.Body({
                 mass: 0,
                 position: currentPosition,
                 collisionFilterGroup: Groups.GROUP3,
@@ -436,7 +440,7 @@ export class ExtendedWorld extends World {
             //Add visual Body
             if (this.render) {
 
-                var geometry = new THREE.BoxGeometry(length * 2, 1 * 2, 50 * 2); // double chasis shape
+                let geometry = new THREE.BoxGeometry(length * 2, 1, 50 * 2); // double chasis shape
                 let trackVisual = new THREE.Mesh(geometry, trackTexture);
 
                 const posBody = trackPiece.position;
@@ -538,14 +542,14 @@ export class ExtendedWorld extends World {
      */
     createRandomCar(): vehicleGenome {
         //GenerateRandomCar Here
-        var vehicle: vehicleGenome = {
+        let vehicle: vehicleGenome = {
             baseWeight: 10 + this.roundToFour(Math.random() * 200), //base weigth - influences the cars calculated weight and its engine power
             bodyVectors: [],
             wheels: []
         };
 
         //Minimum 4 vectors.
-        var bodyVectorAmount = 4 + Math.floor(Math.random() * 8);
+        let bodyVectorAmount = 4 + Math.floor( Math.random() * 5);
 
         for (let i = 0; i < bodyVectorAmount; i++) {
             let x = this.roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 6));
@@ -554,12 +558,12 @@ export class ExtendedWorld extends World {
             vehicle.bodyVectors.push(new CANNON.Vec3(x, y, z));
         }
 
-        var wheelAmount = Math.floor(Math.random() * 10);
+        let wheelAmount = Math.floor(Math.random() * 10);
 
         //TODO How to handle 'incorrect' wheels
         // fe wheels that would spawn too far away from the car
         for (let j = 0; j < wheelAmount; j++) {
-            var wheel: wheel = {
+            let wheel: wheel = {
                 radius: (this.roundToFour(Math.max(1, Math.random() * 3))), //wheel radius [1.5, 3)
                 width: (this.roundToFour(2.5 - Math.random())), //wheel width (1.5, 2.5]
 
