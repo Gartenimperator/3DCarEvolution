@@ -2,9 +2,9 @@ import {ExtendedRigidVehicle} from "./ExtendedRigidVehicle";
 import {vehicleGenome, wheel} from "./ExtendedWorld";
 import * as CANNON from "cannon-es";
 
-type fitnessData = {
+export type fitnessData = {
     id: number,
-    oldVehicleGen: vehicleGenome,
+    oldVehicleGen?: vehicleGenome,
     distanceTraveled: number,
     hasFinished: boolean,
     timeInSteps: number,
@@ -79,8 +79,10 @@ export class PopulationManager {
 
         this.fitnessData.forEach((carA, carAPlacement) => {
             let carBPlacement = Math.floor(Math.random() * this.fitnessData.length);
-            if (carBPlacement < carAPlacement) {
-                tournamentSelection.push(carA.oldVehicleGen);
+            if (carA.fitness > this.fitnessData[carBPlacement].fitness) {
+                if (carA.oldVehicleGen) {
+                    tournamentSelection.push(carA.oldVehicleGen);
+                }
                 tournamentSelection2.push(carA);
             } else {
                 tournamentSelection.push(this.fitnessData[carBPlacement].oldVehicleGen);
@@ -88,6 +90,16 @@ export class PopulationManager {
             }
         });
 
+        let wheelCounter = 0;
+        let bodyCounter = 0;
+        tournamentSelection.map(car => {
+            wheelCounter = wheelCounter + car.wheels.length;
+            bodyCounter = bodyCounter + car.bodyVectors.length;
+        })
+        console.log('Wheel1:' + wheelCounter);
+        console.log('body1:' + bodyCounter);
+        wheelCounter = 0;
+        bodyCounter = 0;
         console.log(tournamentSelection2.sort((a, b) => a.fitness - b.fitness));
 
         for (let i = 0; i < this.populationSize / 2; i++) {
@@ -95,9 +107,16 @@ export class PopulationManager {
             let parent2 = tournamentSelection[Math.floor(Math.random() * this.populationSize)];
 
             let children = this.crossOver(parent1, parent2);
+            wheelCounter = wheelCounter + children[0].wheels.length;
+            wheelCounter = wheelCounter + children[1].wheels.length;
+            bodyCounter = bodyCounter + children[0].bodyVectors.length;
+            bodyCounter = bodyCounter + children[1].bodyVectors.length;
             newGeneration.push(this.mutateVehicle(children[0]));
             newGeneration.push(this.mutateVehicle(children[1]));
         }
+
+        console.log('Wheel2:' + wheelCounter);
+        console.log('body2:' + bodyCounter);
         return newGeneration;
     }
 
@@ -229,7 +248,7 @@ export class PopulationManager {
      * @private
      */
     private calculateFitness(stepNumber: number, hasFinished: boolean, distance: number): number {
-        return distance + (hasFinished ? 100 : 0);
+        return distance + (hasFinished ? 100000/stepNumber : 0);
     }
 
     /**

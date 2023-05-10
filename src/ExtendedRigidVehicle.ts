@@ -248,7 +248,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         const rotateParallelToXAxis = new CANNON.Quaternion().setFromEuler(Math.PI / 2, 0, 0);
         const shape = new CANNON.Cylinder(radius, radius, width, 25);
         wheelBody.addShape(shape, new CANNON.Vec3(), rotateParallelToXAxis);
-        wheelBody.angularDamping = 0.5;
+        wheelBody.angularDamping = 0.4;
 
         this.addWheel({
             body: wheelBody,
@@ -256,13 +256,29 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             axis: new CANNON.Vec3(0, 0, -1)
         });
 
-        this.vehicleMass = this.vehicleMass + wheelMass;
+        this.constraints[this.wheelBodies.length - 1].equations[1].setSpookParams(10000, 6, 1/60);
 
-        let wheelForce: number = 0;
-        if (wheelMass < 100) {
-            wheelForce = 0.1 * wheelMass * wheelMass;
+        this.vehicleMass = this.vehicleMass + wheelMass;
+        let wheelForce = 0;
+
+        if (wheelMass < 20) {
+            wheelForce = wheelMass * 7;
+            wheelBody.angularDamping = 0.5;
         } else {
-            wheelForce = Math.log2(this.bodyMass) * wheelMass * 2 + 100;
+            wheelForce = wheelMass * 12;
+            wheelBody.angularDamping = 0.6;
+        }
+
+        if (wheelMass > 100) {
+            wheelForce = wheelForce + 1.5 * wheelMass;
+        }
+
+        if (wheelMass > 150) {
+            wheelForce = wheelForce + 2 * wheelMass;
+        }
+
+        if (wheelMass > 200) {
+            wheelForce = wheelForce + 2 * wheelMass;
         }
 
         if (canSteer) {
@@ -273,6 +289,8 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             wheelForce,
             this.wheelBodies.length - 1
         );
+
+        //this.setMotorSpeed(0, this.wheelBodies.length - 1);
     }
 
     /**

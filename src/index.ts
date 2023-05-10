@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module';
 import {ExtendedWorld, vehicleGenome} from "./ExtendedWorld";
-import {Material} from "three";
+import {DataStore} from './DataStore.ts';
 
 // Detects webgl
 /*
@@ -56,8 +56,8 @@ var steps: number[] = [
 var nowWorking: number[] = [0, 10, 0, 0, 45, -45, -90, 180, -90, 0, 0, 0, 0, -110, -45, 0, -30, -20, 0, 10, 10];
 var tumble: number[] = [-30, -30, -30, -30, -30, -30, -30, -30, -90, -90, -90, -90, -90, -90, -90, 0, 0, 0, 90, 90, 90, 90, -30, -30, -30, -30];
 var simpleTrack: number[] = [
-    0, 15, 10, 0, 10, 0, 10, -30, -30, -30, -20, -10, 0, 10, 20, -90, 0, 80, -10, -10, -20, 0, 30,
-    20, 10, 0];
+    0, 15, 10, 0, 10, 0, 10, -30, -30, -30, -20, -10, 0, 10, 20, -90, 0, 0,0,0, -10, -10, -20, 0, 30,
+    20, 10, 0,-30,-30,-30,-20,-10,-5,0,5,10,-90,-70,70,90,-10,0,0,0];
 
 /**
  * Include hurdles. May be spheres placed into the track. cylinder or convexCustomShape better?
@@ -70,12 +70,12 @@ const textureLoader = new THREE.TextureLoader();
 let trackTexture: THREE.MeshStandardMaterial;
 
 //Generic-Algorithm global variables
-var populationSize: number = 40;
+var populationSize: number = 80;
 var amountOfWorlds: number = 1;
 
 var mutationRate = 0.05;
 
-var timeOut: number = 360;
+var timeOut: number = 300;
 
 var generationCounter = 0;
 
@@ -85,6 +85,12 @@ var generationCounter = 0;
 
 let simulateThisGeneration = true;
 let isPaused = false;
+
+/**
+ * DataStore
+ */
+
+let dataStore = new DataStore();
 
 /**
  * Utils Function
@@ -155,6 +161,7 @@ function startSimulation(population: vehicleGenome[] | undefined) {
 }
 
 function newPopulation() {
+    dataStore.resetData();
     startSimulation([]);
 }
 
@@ -304,10 +311,14 @@ function initGraphics() {
 }
 
 function simulateNextGeneration() {
+
     let nextGeneration: vehicleGenome[];
 
     worlds.forEach(world => {
         world.cleanUpCurrentGeneration(true);
+        if (world.render) {
+            dataStore.pushData(world.populationManager.fitnessData);
+        }
         nextGeneration = world.populationManager.createNextGeneration(mutationRate);
     })
 
@@ -373,7 +384,7 @@ function updatePhysics() {
             world.updatePhysicsAndScene(frameTime, timeOut);
 
             //uncomment to view debug mode
-            world.cannonDebugRenderer.update();
+            //world.cannonDebugRenderer.update();
         } else {
             console.log('Disabling world with id: ' + world.id);
             inactiveWorlds.set(world.id, world);
@@ -400,7 +411,6 @@ function render() {
         updatePhysics();
 
     } else if (autoRunCheckbox.checked && simulateThisGeneration) {
-
         simulateNextGeneration();
     }
     renderer.render(scene, camera);
