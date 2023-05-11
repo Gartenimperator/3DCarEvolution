@@ -17,22 +17,16 @@ export type fitnessData = {
  * Track a Population of vehicles and their status inside their world.
  */
 export class PopulationManager {
-    leadingCar: ExtendedRigidVehicle;
     activeCars: Map<number, ExtendedRigidVehicle> = new Map();
     disabledCars: Map<number, ExtendedRigidVehicle> = new Map();
     fitnessData: fitnessData[] = [];
     populationSize: number = 0;
-    mutationRate: number = 0;
+    batchSize: number = 0;
+    mutationRate: number = 0.05;
 
-    constructor(populationSize: number) {
-        //dummy vehicle
-        this.leadingCar = new ExtendedRigidVehicle({
-            bodyVectors: [],
-            baseWeight: 1,
-            wheels: []
-        }, undefined, undefined, undefined, -1);
-        this.leadingCar.chassisBody.position.set(-1, 0, 0);
+    constructor(populationSize: number, batchSize: number) {
         this.populationSize = populationSize;
+        this.batchSize = batchSize;
     }
 
     /**
@@ -44,7 +38,7 @@ export class PopulationManager {
     }
 
     /**
-     * Disable the given vehicle and lower the populationSize
+     * Disable the given vehicle.
      * @param car to disable.
      * @param stepNumber at which the car is disabled.
      */
@@ -75,6 +69,7 @@ export class PopulationManager {
         this.mutationRate = mutationRate;
 
         let tournamentSelection: vehicleGenome[] = [];
+        let tournamentSelection2: fitnessData[] = [];
         let newGeneration: vehicleGenome[] = [];
 
         this.fitnessData.forEach((carA) => {
@@ -82,9 +77,11 @@ export class PopulationManager {
             if (carA.fitness > this.fitnessData[carBPlacement].fitness) {
                 if (carA.oldVehicleGen) {
                     tournamentSelection.push(carA.oldVehicleGen);
+                    tournamentSelection2.push(carA);
                 }
             } else {
                 tournamentSelection.push(this.fitnessData[carBPlacement].oldVehicleGen);
+                tournamentSelection2.push(this.fitnessData[carBPlacement]);
             }
         });
 
@@ -103,7 +100,6 @@ export class PopulationManager {
             newGeneration.push(this.mutateVehicle(children[0]));
             newGeneration.push(this.mutateVehicle(children[1]));
         }
-
         return newGeneration;
     }
 

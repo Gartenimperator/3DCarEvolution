@@ -11,17 +11,21 @@
 <div class="wrapper">
     <div id="simulationWindow"></div>
 </div>
+<span id="currentBatchInfo"></span>
+<br />
 <button id="startSimulationBtn">New Population!</button>
-
 <button id="stopBtn">Stop</button>
 <button id="continueBtn">Continue</button>
-<button id="nextGenerationBtn">Generate next Generation</button>
+<button id="nextGenerationBtn">Skip and simulate next batch</button>
 <input id="autoRunCheckbox" type="checkbox"/>
 <label for="autoRunCheckbox">Don't stop, keep evolving!</label>
 <br />
-<label for="population">Population: </label>
-<input id="population"/>
-<span style="color: red" id="populationInputError" hidden="true"> Please enter a number larger than Zero.</span>
+<label for="batchSize">Batch size: </label>
+<input id="batchSize"/>
+<span style="color: red" id="batchSizeInputError" hidden="true"> Please enter a number larger than Zero.</span>
+<label for="batchSize">Amount of batches per world: </label>
+<input id="amountOfBatches"/>
+<span style="color: red" id="amountOfBatchesInputError" hidden="true"> Please enter a number larger than Zero.</span>
 <br />
 <label for="gravity">Gravity: </label>
 <input id="gravity"/>

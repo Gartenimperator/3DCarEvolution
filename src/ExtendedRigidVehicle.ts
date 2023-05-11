@@ -230,7 +230,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                              physicalWheelMaterial: CANNON.Material,
                              canSteer: boolean) {
         const wheelVolume = Math.PI * width * (radius * radius);
-        const wheelMass = Math.max(1, wheelVolume * density);
+        let wheelMass = Math.max(1, wheelVolume * density);
 
         let wheelBody = new CANNON.Body({
             mass: wheelMass,
@@ -274,17 +274,20 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         }
 
         if (wheelMass > 200) {
-            wheelForce = wheelForce + 2 * wheelMass;
+            wheelMass = 10;
+            wheelForce = 1000;
         }
 
         if (canSteer) {
             wheelForce = wheelForce * 2 / 3; //Steerable wheels get a small punishment by power reduction.
         }
 
-        this.setWheelForce(
+        /*this.setWheelForce(
             wheelForce,
             this.wheelBodies.length - 1
         );
+
+         */
 
         //this.setMotorSpeed(0, this.wheelBodies.length - 1);
     }

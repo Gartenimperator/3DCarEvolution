@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module';
 import {ExtendedWorld, vehicleGenome} from "./ExtendedWorld";
-import {DataStore} from './DataStore.ts';
+import {WorldManager} from "./WorldManager";
 
 // Detects webgl
 /*
@@ -27,10 +27,7 @@ let controls: OrbitControls;
 let materialDynamic, materialStatic;
 
 // Physics variables
-
-let activeWorlds: Map<number, ExtendedWorld> = new Map();
-let worlds: ExtendedWorld[] = [];
-let inactiveWorlds: Map<number, ExtendedWorld> = new Map();
+let currentWorld: ExtendedWorld;
 let groundBodyContactMaterialOptions = {
     friction: 0.8,
     restitution: 0.3,
@@ -56,8 +53,8 @@ let steps: number[] = [
 let nowWorking: number[] = [0, 10, 0, 0, 45, -45, -90, 180, -90, 0, 0, 0, 0, -110, -45, 0, -30, -20, 0, 10, 10];
 let tumble: number[] = [-30, -30, -30, -30, -30, -30, -30, -30, -90, -90, -90, -90, -90, -90, -90, 0, 0, 0, 90, 90, 90, 90, -30, -30, -30, -30];
 let simpleTrack: number[] = [
-    0, 15, 10, 0, 10, 0, 10, -30, -30, -30, -20, -10, 0, 10, 20, -90, 0, 0,0,0, -10, -10, -20, 0, 30,
-    20, 10, 0,-30,-30,-30,-20,-10,-5,0,5,10,-90,-70,70,90,-10,0,0,0];
+    0, 15, 10, 0, 10, 0, 10, -30, -30, -30, -20, -10, 0, 10, 20, -90, 0, 0, 0, 0, -10, -10, -20, 0, 30,
+    20, 10, 0, -30, -30, -30, -20, -10, -5, 0, 5, 10, -90, -70, 70, 90, -10, 0, 0, 0];
 
 /**
  * Include hurdles. May be spheres placed into the track. cylinder or convexCustomShape better?
@@ -69,9 +66,11 @@ let trackPieceLengthX = 5;
 const textureLoader = new THREE.TextureLoader();
 let trackTexture: THREE.MeshStandardMaterial;
 
-//Generic-Algorithm global variables
-let populationSize: number = 65;
+//Genetic-Algorithm global variables
 let amountOfWorlds: number = 1;
+
+let batchSize: number = 50;
+let amountOfBatches: number = 3;
 
 let mutationRate = 0.05;
 
@@ -87,10 +86,10 @@ let simulateThisGeneration = true;
 let isPaused = false;
 
 /**
- * DataStore
+ * WorldManager
  */
 
-let dataStore = new DataStore();
+let worldManager: WorldManager = new WorldManager(amountOfWorlds, batchSize, amountOfBatches);
 
 /**
  * Utils Function
@@ -102,13 +101,15 @@ let dataStore = new DataStore();
 let nextGenBtn = document.getElementById('nextGenerationBtn');
 let stopBtn = document.getElementById("stopBtn");
 let continueBtn = document.getElementById("continueBtn");
-let newPopulationBtn = document.getElementById("startSimulationBtn"); //TODO
+let newPopulationBtn = document.getElementById("startSimulationBtn");
 let updateVariablesBtn = document.getElementById('updateVariables');
 let autoRunCheckbox = document.getElementById('autoRunCheckbox');
 let gravityInput = document.getElementById('gravity');
 let gravityInputError = document.getElementById('gravityInputError');
-let populationInput = document.getElementById('population');
-let populationInputError = document.getElementById('populationInputError');
+let batchSizeInput = document.getElementById('batchSize');
+let batchSizeInputError = document.getElementById('batchSizeInputError');
+let amountOfBatchesInput = document.getElementById('amountOfBatches');
+let amountOfBatchesInputError = document.getElementById('amountOfBatchesInputError');
 let timeoutInput = document.getElementById('timeout');
 let timeoutInputError = document.getElementById('timeoutInputError');
 let mutationRateInput = document.getElementById('mutationRate');
@@ -118,6 +119,9 @@ let trackInputError = document.getElementById('trackGradientsInputError');
 let trackPieceLengthXInput = document.getElementById('trackPieceLengthX');
 let trackPieceLengthXInputError = document.getElementById('trackPieceLengthXInputError');
 let variablesInputConfirmation = document.getElementById('variablesInputConfirmation');
+
+
+let infoText = document.getElementById('currentBatchInfo');
 
 /**
  * Input listeners
@@ -131,9 +135,11 @@ function updateButtons(disableStopBtn: boolean, disableContinueBtn: boolean, dis
 }
 
 function resetInputFields() {
+    infoText.innerHTML = 'Current Generation: ' + worldManager.currentGen + '. Currently simulating batch ' + (1 + worldManager.currentBatch) + ' of world ' + worldManager.worldCounter + '.';
     hideErrorMsgs();
     gravityInput.value = gravity;
-    populationInput.value = populationSize;
+    batchSizeInput.value = batchSize;
+    amountOfBatchesInput.value = amountOfBatches;
     timeoutInput.value = timeOut;
     mutationRateInput.value = mutationRate;
     trackInput.value = trackGradients;
@@ -142,7 +148,8 @@ function resetInputFields() {
 }
 
 function hideErrorMsgs() {
-    populationInputError.hidden = true;
+    batchSizeInputError.hidden = true;
+    amountOfBatchesInputError.hidden = true;
     gravityInputError.hidden = true;
     timeoutInputError.hidden = true;
     mutationRateInputError.hidden = true;
@@ -150,19 +157,32 @@ function hideErrorMsgs() {
     trackPieceLengthXInputError.hidden = true;
 }
 
-function startSimulation(population: vehicleGenome[]) {
+function startSimulation() {
+    simulateThisGeneration = true;
+    updateButtons(false, true, false, true);
 
+    initGraphics();
+    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions);
+    currentWorld.initTrackWithGradients(trackGradients, trackPieceLengthX, trackTexture, scene);
+    currentWorld.cameraFocus.add(camera);
+    resetInputFields();
+}
+
+function restartSimulation() {
+    console.log('new Population');
     simulateThisGeneration = true;
     updateButtons(false, true, false, true);
     resetInputFields();
 
+    worldManager.reset();
     initGraphics();
-    initWorlds(population);
+    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions);
+    currentWorld.initTrackWithGradients(trackGradients, trackPieceLengthX, trackTexture, scene);
+    currentWorld.cameraFocus.add(camera);
 }
 
 function newPopulation() {
-    dataStore.resetData();
-    startSimulation([]);
+    restartSimulation();
 }
 
 function stopSimulation() {
@@ -217,10 +237,16 @@ function updateVariables() {
         trackPieceLengthXInputError.hidden = false;
     }
 
-    let newPopulation = parseInt(populationInput.value);
-    if (!(newPopulation > 0)) {
+    let newBatchSize = parseInt(batchSizeInput.value);
+    if (!(newBatchSize > 0)) {
         canUpdate = false;
-        populationInputError.hidden = false;
+        batchSizeInputError.hidden = false;
+    }
+
+    let newAmountOfBatches = parseInt(amountOfBatchesInput.value);
+    if (!(newAmountOfBatches > 0)) {
+        canUpdate = false;
+        amountOfBatchesInputError.hidden = false;
     }
 
     let newTimeout = parseInt(timeoutInput.value);
@@ -237,7 +263,8 @@ function updateVariables() {
 
     if (canUpdate) {
         gravity = newGravity;
-        populationSize = newPopulation;
+        batchSize = newBatchSize;
+        amountOfBatches = newAmountOfBatches;
         timeOut = newTimeout;
         mutationRate = newMutationRate;
         trackGradients = newTrackGradients;
@@ -311,65 +338,14 @@ function initGraphics() {
 }
 
 function simulateNextGeneration() {
-
-    let nextGeneration: vehicleGenome[];
-
-    worlds.forEach(world => {
-        world.cleanUpCurrentGeneration(true);
-        dataStore.pushData(world.populationManager.fitnessData, currentGen);
-        nextGeneration = world.populationManager.createNextGeneration(mutationRate);
-    })
-
-    currentGen++;
-    startSimulation(nextGeneration);
-}
-
-/**
- * Initializes the worlds at the start of each step of the genetic algorithm
- */
-function initWorlds(population: vehicleGenome[]) {
-    removeOldWorlds();
-
-    if (population.length === 0) {
-        currentGen = 0;
-    }
-
-    for (let i = 0; i < amountOfWorlds; i++) {
-        let world = new ExtendedWorld(
-            scene,
-            worldOptions,
-            gravity,
-            groundBodyContactMaterialOptions,
-            populationSize,
-            i,
-            population,
-            true
-        );
-
-        //world.initTrackWithHeightfield([]);
-        world.initTrackWithGradients(trackGradients, trackPieceLengthX, trackTexture);
-        activeWorlds.set(world.id, world);
-        worlds.push(world);
-    }
-
-    //prepare world to render
-    worlds[0].cameraFocus.add(camera);
-}
-
-/**
- * Clean Up
- */
-
-function removeOldWorlds() {
-    //Clean up worlds.
-    //this allows the garbage collector to collect the unused objects faster
-    worlds.forEach(world => {
-        world.cleanUpCurrentGeneration(true);
-    });
-
-    worlds = [];
-    activeWorlds.clear();
-    inactiveWorlds.clear();
+    console.log('nextGeneration');
+    initGraphics();
+    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions);
+    currentWorld.initTrackWithGradients(trackGradients, trackPieceLengthX, trackTexture, scene);
+    currentWorld.cameraFocus.add(camera);
+    simulateThisGeneration = true;
+    updateButtons(false, true, false, true);
+    resetInputFields();
 }
 
 /**
@@ -380,31 +356,12 @@ function removeOldWorlds() {
  * Calculates one step for each active CANNON-world while updating the THREE visual accordingly.
  */
 function updatePhysics() {
-    activeWorlds.forEach((world) => {
-        //only update worlds with active cars
-        if (world.isActive()) {
-
-            /*
-            while (false && !world.render && world.isActive()) {
-                world.extendedStep(frameTime, timeOut);
-            }
-             */
-
-            world.extendedStep(frameTime, timeOut);
-
-            //uncomment to view debug mode
-            //world.cannonDebugRenderer.update();
-        } else {
-            inactiveWorlds.set(world.id, world);
-            activeWorlds.delete(world.id);
-
-            if (activeWorlds.size === 0) {
-                document.getElementById("stopBtn").disabled = true;
-                document.getElementById("continueBtn").disabled = true;
-                document.getElementById("nextGenerationBtn").disabled = false;
-            }
-        }
-    });
+    currentWorld.extendedStep(frameTime, timeOut);
+    if (!currentWorld.isActive()) {
+        document.getElementById("stopBtn").disabled = true;
+        document.getElementById("continueBtn").disabled = true;
+        document.getElementById("nextGenerationBtn").disabled = false;
+    }
 }
 
 /**
@@ -415,7 +372,7 @@ function render() {
     camera.copy(fakeCamera);
     requestAnimationFrame(render);
 
-    if (activeWorlds.size > 0 && simulateThisGeneration) {
+    if (currentWorld.isActive() && simulateThisGeneration) {
         updatePhysics();
     } else if (autoRunCheckbox.checked && simulateThisGeneration) {
         simulateNextGeneration();
@@ -428,5 +385,5 @@ function render() {
  * main
  */
 
-startSimulation([]);
+startSimulation();
 render();

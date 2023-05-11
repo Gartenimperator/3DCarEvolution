@@ -60,8 +60,8 @@ export type vehicleGenome = {
  * Extends the existing CANNON.World class to make interaction between Three and Cannon easier.
  */
 export class ExtendedWorld extends World {
-    scene: Scene;
     populationManager: PopulationManager;
+    leadingCar: ExtendedRigidVehicle;
     cameraFocus: Mesh = new Mesh();
     cannonDebugRenderer: any;
     groundMaterial: CANNON.Material = new CANNON.Material('groundMaterial');
@@ -87,9 +87,9 @@ export class ExtendedWorld extends World {
      * @param options
      * @param gravity
      * @param groundBodyContactMaterialOptions
-     * @param populationSize
      * @param id
      * @param population
+     * @param populationManager
      * @param render
      */
     constructor(
@@ -97,29 +97,36 @@ export class ExtendedWorld extends World {
         options: any,
         gravity: number[],
         groundBodyContactMaterialOptions: any,
-        populationSize: number,
         id: number,
         population: vehicleGenome[],
+        populationManager: PopulationManager,
         render: boolean
     ) {
         super(options);
         this.id = id;
-        this.populationManager = new PopulationManager(populationSize);
-        this.scene = scene;
+        this.carIdCounter = id * populationManager.batchSize;
+        this.populationManager = populationManager;
         this.render = render;
 
         this.broadphase = new CANNON.SAPBroadphase(this);
         this.gravity.set(gravity[0], gravity[1], gravity[2]);
 
-        this.scene.add(this.cameraFocus);
+        scene.add(this.cameraFocus);
 
         this.initCarGroundContact(
             groundBodyContactMaterialOptions
         );
-        this.initPopulation(population);
+        this.initPopulation(population, scene);
+
+        this.leadingCar = new ExtendedRigidVehicle({
+            bodyVectors: [],
+            baseWeight: 1,
+            wheels: []
+        }, undefined, undefined, undefined, -1);
+        this.leadingCar.chassisBody.position.set(-1, 0, 0);
 
         //Can be removed if debugging is unnecessary.
-        this.cannonDebugRenderer = CannonDebugger(this.scene, this);
+        this.cannonDebugRenderer = CannonDebugger(scene, this);
     }
 
     /**
@@ -127,20 +134,20 @@ export class ExtendedWorld extends World {
      * vehicleGens, then fill the slots with random vehicles. Otherwise the population has been decreased and
      * from the passed vehicleGens only the amount of the new PopulationSize are added.
      */
-    initPopulation(population: vehicleGenome[]) {
-        if ((this.populationManager.populationSize - population.length) >= 0) { // Population got increased by the user.
+    initPopulation(population: vehicleGenome[], scene: any) {
+        if ((this.populationManager.batchSize - population.length) >= 0) { // Population got increased by the user.
 
             population.map((vehicleGenome) => {
-                this.addCar(vehicleGenome);
+                this.addCar(vehicleGenome, scene);
             });
 
-            for (let i = 0; i < this.populationManager.populationSize - population.length; i++) {
-                this.addCar(createRandomCar());
+            for (let i = 0; i < this.populationManager.batchSize - population.length; i++) {
+                this.addCar(createRandomCar(), scene);
             }
         } else { //Population got decreased by the user.
             //TODO decrease population correctly
-            for (let j = 0; j < this.populationManager.populationSize; j++) {
-                this.addCar(population[j]);
+            for (let j = 0; j < this.populationManager.batchSize; j++) {
+                this.addCar(population[j], scene);
             }
         }
     }
@@ -149,13 +156,13 @@ export class ExtendedWorld extends World {
      * Add a single vehicle to the world according to its passed genome.
      * @param vehicleGenome which details the vehicle.
      */
-    addCar(vehicleGenome: vehicleGenome) {
+    addCar(vehicleGenome: vehicleGenome, scene: any) {
 
         let vehicle = new ExtendedRigidVehicle(
             vehicleGenome,
             this.bodyMaterial,
             this.wheelMaterialHighFriction,
-            this.render ? this.scene : undefined,
+            this.render ? scene : undefined,
             this.carIdCounter++
         );
 
@@ -173,7 +180,7 @@ export class ExtendedWorld extends World {
                 vehicleGenome,
                 this.bodyMaterial,
                 this.wheelMaterialHighFriction,
-                this.render ? this.scene : undefined,
+                undefined,
                 this.carIdCounter++
             );
 
@@ -195,9 +202,9 @@ export class ExtendedWorld extends World {
         if (this.render) {
 
             //Update leading car.
-            if (!this.populationManager.activeCars.has(this.populationManager.leadingCar.id)) {
+            if (!this.populationManager.activeCars.has(this.leadingCar.id)) {
                 if (this.populationManager.activeCars.size > 0) {
-                    this.populationManager.leadingCar.chassisBody.position.set(-1, 0, 0);
+                    this.leadingCar.chassisBody.position.set(-1, 0, 0);
                 } else {
                     this.disabled = true;
                     return;
@@ -212,7 +219,7 @@ export class ExtendedWorld extends World {
             });
 
             //Update the camera position.
-            let leadingPos = this.populationManager.leadingCar.chassisBody.position;
+            let leadingPos = this.leadingCar.chassisBody.position;
             this.cameraFocus.position.set(leadingPos.x, leadingPos.y, leadingPos.z);
 
         } else {
@@ -239,8 +246,8 @@ export class ExtendedWorld extends World {
         const quatBody = car.chassisBody.quaternion;
 
         //Updating the leading car is only needed, if the worlds is being rendered.
-        if (this.populationManager.leadingCar.chassisBody.position.x < car.chassisBody.position.x) {
-            this.populationManager.leadingCar = car;
+        if (this.leadingCar.chassisBody.position.x < car.chassisBody.position.x) {
+            this.leadingCar = car;
         }
 
         car.visualBody.position.set(posBody.x, posBody.y, posBody.z);
@@ -355,7 +362,7 @@ export class ExtendedWorld extends World {
      * @param length of each track piece.
      * @param trackTexture defines the visual representation of the track.
      */
-    initTrackWithGradients(gradients: number[], length: number, trackTexture: THREE.MeshStandardMaterial) {
+    initTrackWithGradients(gradients: number[], length: number, trackTexture: THREE.MeshStandardMaterial, scene) {
 
         this.track.trackWidth = 50;
 
@@ -383,7 +390,7 @@ export class ExtendedWorld extends World {
             this.copyPosition(trackStart, trackStartVisual);
 
             this.track.threeJSTrackPieces.push(trackStartVisual);
-            this.scene.add(trackStartVisual);
+            scene.add(trackStartVisual);
         }
 
         //the track always starts 10 Meters in front of the cars
@@ -449,7 +456,7 @@ export class ExtendedWorld extends World {
                 trackVisual.rotateZ((gradient * 2 * Math.PI) / 360);
 
                 this.track.threeJSTrackPieces.push(trackVisual);
-                this.scene.add(trackVisual);
+                scene.add(trackVisual);
             }
 
         });
