@@ -66,16 +66,21 @@ export class WorldManager {
             this.currentPopulationManager,
             true
         );
-        console.log(this.currentWorld);
-        console.log(this.currentPopulationManager);
         return this.currentWorld;
     }
 
-    reset() {
+    reset(newBatchSize: number | undefined, newAmountOfBatches: number | undefined) {
         this.dataStore.resetData();
         this.populationStore.clear();
         this.currentBatch = -1;
         this.worldCounter = 1;
+        this.currentGen = 1;
+        if (newBatchSize) {
+            this.batchSize = newBatchSize;
+        }
+        if (newAmountOfBatches) {
+            this.batchAmount = newAmountOfBatches - 1;
+        }
         this.currentPopulationManager = new PopulationManager(this.batchSize * (1 + this.batchAmount), this.batchSize);
     }
 }

@@ -69,7 +69,6 @@ export class PopulationManager {
         this.mutationRate = mutationRate;
 
         let tournamentSelection: vehicleGenome[] = [];
-        let tournamentSelection2: fitnessData[] = [];
         let newGeneration: vehicleGenome[] = [];
 
         this.fitnessData.forEach((carA) => {
@@ -77,11 +76,9 @@ export class PopulationManager {
             if (carA.fitness > this.fitnessData[carBPlacement].fitness) {
                 if (carA.oldVehicleGen) {
                     tournamentSelection.push(carA.oldVehicleGen);
-                    tournamentSelection2.push(carA);
                 }
             } else {
                 tournamentSelection.push(this.fitnessData[carBPlacement].oldVehicleGen);
-                tournamentSelection2.push(this.fitnessData[carBPlacement]);
             }
         });
 

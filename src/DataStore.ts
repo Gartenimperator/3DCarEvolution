@@ -6,9 +6,6 @@ import Chart from "chart.js/auto";
 import {fitnessData} from "./PopulationManager";
 
 export class DataStore {
-
-    fitnessDataStore: fitnessData[][] = [];
-
     chart: any;
 
     constructor() {
@@ -17,7 +14,6 @@ export class DataStore {
 
     pushData(fitnessData: fitnessData[], currentGen: number) {
         let sortedFitnessData = fitnessData.sort((a, b) => b.fitness - a.fitness);
-        this.fitnessDataStore.push(sortedFitnessData);
 
         let median = {
             fitness: 0,
@@ -28,7 +24,7 @@ export class DataStore {
 
         this.chart.data.labels.push(currentGen);
 
-        if (currentGen === 0) {
+        if (currentGen === 1) {
             this.chart.data.datasets.push({
                 borderColor: 'darkblue'
             });

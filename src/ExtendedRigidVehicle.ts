@@ -261,12 +261,12 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             wheelForce = wheelMass * 7;
             wheelBody.angularDamping = 0.5;
         } else {
-            wheelForce = wheelMass * 12;
+            wheelForce = wheelMass * 11;
             wheelBody.angularDamping = 0.6;
         }
 
         if (wheelMass > 100) {
-            wheelForce = wheelForce + 1.5 * wheelMass;
+            wheelForce = wheelForce + 1.4 * wheelMass;
         }
 
         if (wheelMass > 150) {
@@ -274,20 +274,17 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         }
 
         if (wheelMass > 200) {
-            wheelMass = 10;
-            wheelForce = 1000;
+            wheelForce = wheelForce + 3 * wheelMass;
         }
 
         if (canSteer) {
             wheelForce = wheelForce * 2 / 3; //Steerable wheels get a small punishment by power reduction.
         }
 
-        /*this.setWheelForce(
+        this.setWheelForce(
             wheelForce,
             this.wheelBodies.length - 1
         );
-
-         */
 
         //this.setMotorSpeed(0, this.wheelBodies.length - 1);
     }
@@ -426,6 +423,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      */
     updateSteering(trackWidth: number) {
         this.activeWheels.forEach((wheel, i) => {
+
             let positionZ = this.chassisBody.position.z;
             if (wheel.canSteer && (positionZ < -trackWidth / 10 || positionZ > trackWidth / 10)) {
 

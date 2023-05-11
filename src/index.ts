@@ -69,8 +69,8 @@ let trackTexture: THREE.MeshStandardMaterial;
 //Genetic-Algorithm global variables
 let amountOfWorlds: number = 1;
 
-let batchSize: number = 50;
-let amountOfBatches: number = 3;
+let batchSize: number = 1;
+let amountOfBatches: number = 5;
 
 let mutationRate = 0.05;
 
@@ -134,8 +134,16 @@ function updateButtons(disableStopBtn: boolean, disableContinueBtn: boolean, dis
     nextGenBtn.disabled = disableNextGenBtn;
 }
 
+function next() {
+    initGraphics();
+    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions);
+    currentWorld.initTrackWithGradients(trackGradients, trackPieceLengthX, trackTexture, scene);
+    currentWorld.cameraFocus.add(camera);
+}
+
 function resetInputFields() {
-    infoText.innerHTML = 'Current Generation: ' + worldManager.currentGen + '. Currently simulating batch ' + (1 + worldManager.currentBatch) + ' of world ' + worldManager.worldCounter + '.';
+    infoText.innerHTML = 'Generation ' + worldManager.currentGen + '. Currently simulating batch ' + (1 + worldManager.currentBatch) + ' of world ' + worldManager.worldCounter + '.' +
+        '\n Populationsize: ' + (worldManager.batchSize * (worldManager.batchAmount + 1));
     hideErrorMsgs();
     gravityInput.value = gravity;
     batchSizeInput.value = batchSize;
@@ -169,16 +177,11 @@ function startSimulation() {
 }
 
 function restartSimulation() {
-    console.log('new Population');
     simulateThisGeneration = true;
     updateButtons(false, true, false, true);
+    worldManager.reset(batchSize, amountOfBatches);
     resetInputFields();
-
-    worldManager.reset();
-    initGraphics();
-    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions);
-    currentWorld.initTrackWithGradients(trackGradients, trackPieceLengthX, trackTexture, scene);
-    currentWorld.cameraFocus.add(camera);
+    next();
 }
 
 function newPopulation() {
@@ -338,11 +341,7 @@ function initGraphics() {
 }
 
 function simulateNextGeneration() {
-    console.log('nextGeneration');
-    initGraphics();
-    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions);
-    currentWorld.initTrackWithGradients(trackGradients, trackPieceLengthX, trackTexture, scene);
-    currentWorld.cameraFocus.add(camera);
+    next();
     simulateThisGeneration = true;
     updateButtons(false, true, false, true);
     resetInputFields();
@@ -353,10 +352,11 @@ function simulateNextGeneration() {
  **/
 
 /**
- * Calculates one step for each active CANNON-world while updating the THREE visual accordingly.
+ * Calculates one step the current World while updating the THREE visual accordingly.
  */
 function updatePhysics() {
     currentWorld.extendedStep(frameTime, timeOut);
+    //Update cannon debug renderer here for debug.
     if (!currentWorld.isActive()) {
         document.getElementById("stopBtn").disabled = true;
         document.getElementById("continueBtn").disabled = true;
