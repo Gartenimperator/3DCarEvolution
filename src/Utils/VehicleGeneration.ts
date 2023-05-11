@@ -1,4 +1,4 @@
-import CANNON from "cannon-es";
+import * as CANNON from "cannon-es";
 import {vehicleGenome, wheel} from "../ExtendedWorld";
 
 
@@ -9,20 +9,20 @@ import {vehicleGenome, wheel} from "../ExtendedWorld";
  */
 export function createRandomCar(): vehicleGenome {
     //GenerateRandomCar Here
-    var vehicle: vehicleGenome = {
-        baseWeight: 10 + this.roundToFour(Math.random() * 200), //base weigth - influences the cars calculated weight and its engine power
+    let vehicle: vehicleGenome = {
+        baseWeight: 10 + roundToFour(Math.random() * 200), //base weigth - influences the cars calculated weight and its engine power
         bodyVectors: [],
         wheels: []
     };
 
     //Minimum 4 vectors.
-    var bodyVectorAmount = 4 + Math.floor(Math.random() * 8);
+    let bodyVectorAmount = 4 + Math.floor(Math.random() * 8);
 
     for (let i = 0; i < bodyVectorAmount; i++) {
         vehicle.bodyVectors.push(createRandomBodyVector());
     }
 
-    var wheelAmount = Math.floor(Math.random() * 10);
+    let wheelAmount = Math.floor(Math.random() * 10);
 
     for (let j = 0; j < wheelAmount; j++) {
         vehicle.wheels.push(createRandomWheel());
@@ -32,23 +32,30 @@ export function createRandomCar(): vehicleGenome {
 
 export function createRandomWheel(): wheel {
     return {
-        radius: (this.roundToFour(Math.max(1, Math.random() * 3))), //wheel radius [1.5, 3)
-        width: (this.roundToFour(2.5 - Math.random())), //wheel width (1.5, 2.5]
+        radius: (roundToFour(Math.max(1, Math.random() * 3))), //wheel radius [1.5, 3)
+        width: (roundToFour(2.5 - Math.random())), //wheel width (1.5, 2.5]
 
         //Try to generate wheels which are touching the car
-        posX: this.roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 3), //wheel position lengthwise
-        posY: this.roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 3), //wheel position height
-        posZ: this.roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 3), //wheel position width
+        posX: roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 3), //wheel position lengthwise
+        posY: roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 3), //wheel position height
+        posZ: roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 3), //wheel position width
 
-
+        stiffness: Math.random(),
         density: Math.ceil(Math.random() * 5),
         canSteer: Math.floor(Math.random() * 2) === 1,
     };
 }
 
 export function createRandomBodyVector(): CANNON.Vec3 {
-    let x = this.roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 6));
-    let y = this.roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 6));
-    let z = this.roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 6));
+    let x = roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 6));
+    let y = roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 6));
+    let z = roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 6));
     return new CANNON.Vec3(x, y, z);
+}
+
+
+
+// custom round function
+export function roundToFour(num: number) {
+    return +(Math.round(num * 10000) / 10000);
 }

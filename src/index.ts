@@ -12,50 +12,50 @@ document.getElementById( 'container' ).innerHTML = "";
 }
 */
 
-var stats: any;
+let stats: any;
 
 // Graphics variables
-var container: HTMLElement | null;
-var camera: THREE.PerspectiveCamera, renderer: any;
+let container: HTMLElement | null;
+let camera: THREE.PerspectiveCamera, renderer: any;
 
 let scene = new THREE.Scene();
 
 // for more Info why the fakeCamera: https://stackoverflow.com/questions/53292145/forcing-orbitcontrols-to-navigate-around-a-moving-object-almost-working/53298655#53298655
-var fakeCamera: THREE.PerspectiveCamera;
+let fakeCamera: THREE.PerspectiveCamera;
 
-var controls: OrbitControls;
-var materialDynamic, materialStatic;
+let controls: OrbitControls;
+let materialDynamic, materialStatic;
 
 // Physics variables
 
-var activeWorlds: Map<number, ExtendedWorld> = new Map();
-var worlds: ExtendedWorld[] = [];
-var inactiveWorlds: Map<number, ExtendedWorld> = new Map();
-var groundBodyContactMaterialOptions = {
+let activeWorlds: Map<number, ExtendedWorld> = new Map();
+let worlds: ExtendedWorld[] = [];
+let inactiveWorlds: Map<number, ExtendedWorld> = new Map();
+let groundBodyContactMaterialOptions = {
     friction: 0.8,
     restitution: 0.3,
     contactEquationRelaxation: 3,
     frictionEquationStiffness: 1e8
 };
-var worldOptions = {
+let worldOptions = {
     allowSleep: true,
     quatNormalizeFast: false,
     quatNormalizeSkip: 1
 };
-var gravity: number[] = [0, -9.82, 0];
+let gravity: number[] = [0, -9.82, 0];
 const frameTime: number = 1 / 60;
 const fastForwardFrameTime: number = 1 / 20;
 const delta: number = 1; //???
 
 //Track gradient arrays
-var steps: number[] = [
+let steps: number[] = [
     -90, -90, -90, 0, 0, -90, -90, -90, -90, 0, 0, -90, -90, -90, -90, 0, 0, -90, -90, -90, -90, 0,
     0, -90, -90, -90, -90, 0, 0, -90, -90, -90, -90, 0, 0, -90, -90, -90, -90, 0, 0, -90, -90, -90,
     -90, 0, 0, -90
 ];
-var nowWorking: number[] = [0, 10, 0, 0, 45, -45, -90, 180, -90, 0, 0, 0, 0, -110, -45, 0, -30, -20, 0, 10, 10];
-var tumble: number[] = [-30, -30, -30, -30, -30, -30, -30, -30, -90, -90, -90, -90, -90, -90, -90, 0, 0, 0, 90, 90, 90, 90, -30, -30, -30, -30];
-var simpleTrack: number[] = [
+let nowWorking: number[] = [0, 10, 0, 0, 45, -45, -90, 180, -90, 0, 0, 0, 0, -110, -45, 0, -30, -20, 0, 10, 10];
+let tumble: number[] = [-30, -30, -30, -30, -30, -30, -30, -30, -90, -90, -90, -90, -90, -90, -90, 0, 0, 0, 90, 90, 90, 90, -30, -30, -30, -30];
+let simpleTrack: number[] = [
     0, 15, 10, 0, 10, 0, 10, -30, -30, -30, -20, -10, 0, 10, 20, -90, 0, 0,0,0, -10, -10, -20, 0, 30,
     20, 10, 0,-30,-30,-30,-20,-10,-5,0,5,10,-90,-70,70,90,-10,0,0,0];
 
@@ -64,20 +64,20 @@ var simpleTrack: number[] = [
  * CHeck for performance issues -> limit hurdles? how to regulate placement of hurdles?
  */
 
-var trackGradients: number[] = simpleTrack;
-var trackPieceLengthX = 5;
+let trackGradients: number[] = simpleTrack;
+let trackPieceLengthX = 5;
 const textureLoader = new THREE.TextureLoader();
 let trackTexture: THREE.MeshStandardMaterial;
 
 //Generic-Algorithm global variables
-var populationSize: number = 65;
-var amountOfWorlds: number = 1;
+let populationSize: number = 65;
+let amountOfWorlds: number = 1;
 
-var mutationRate = 0.05;
+let mutationRate = 0.05;
 
-var timeOut: number = 300;
+let timeOut: number = 300;
 
-var currentGen = 0;
+let currentGen = 0;
 
 /**
  * Controller variables
@@ -274,17 +274,17 @@ function initGraphics() {
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth * 0.80, window.innerHeight * 0.80);
 
-    var ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    let ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
-    var dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    let dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
     dirLight.position.set(20, 20, 5);
     scene.add(dirLight);
 
     materialDynamic = new THREE.MeshPhongMaterial({color: 0xfca400});
     materialStatic = new THREE.MeshPhongMaterial({color: 0x999999});
 
-    if (container != null) {
+    if (container) {
         container.innerHTML = '';
 
         //See link at the top, as to why I do this
@@ -334,8 +334,8 @@ function initWorlds(population: vehicleGenome[]) {
         currentGen = 0;
     }
 
-    for (var i = 0; i < amountOfWorlds; i++) {
-        var world = new ExtendedWorld(
+    for (let i = 0; i < amountOfWorlds; i++) {
+        let world = new ExtendedWorld(
             scene,
             worldOptions,
             gravity,
@@ -384,9 +384,11 @@ function updatePhysics() {
         //only update worlds with active cars
         if (world.isActive()) {
 
+            /*
             while (false && !world.render && world.isActive()) {
                 world.extendedStep(frameTime, timeOut);
             }
+             */
 
             world.extendedStep(frameTime, timeOut);
 

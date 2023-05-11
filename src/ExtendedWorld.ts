@@ -6,6 +6,7 @@ import {PopulationManager} from "./PopulationManager";
 import {Groups} from "./Groups";
 import {Mesh, Object3D, Scene} from "three";
 import * as THREE from "three";
+import {createRandomCar} from "./Utils/VehicleGeneration";
 
 type Track = {
     /**
@@ -35,9 +36,10 @@ type Track = {
 }
 
 export type wheel = {
-    density: number,
     radius: number,
     width: number,
+    density: number,
+    stiffness: number,
     posX: number,
     posY: number,
     posZ: number,
@@ -128,12 +130,12 @@ export class ExtendedWorld extends World {
     initPopulation(population: vehicleGenome[]) {
         if ((this.populationManager.populationSize - population.length) >= 0) { // Population got increased by the user.
 
-            population.map((vehicleGenom) => {
-                this.addCar(vehicleGenom);
+            population.map((vehicleGenome) => {
+                this.addCar(vehicleGenome);
             });
 
             for (let i = 0; i < this.populationManager.populationSize - population.length; i++) {
-                this.addCar(this.createRandomCar());
+                this.addCar(createRandomCar());
             }
         } else { //Population got decreased by the user.
             //TODO decrease population correctly
@@ -189,7 +191,6 @@ export class ExtendedWorld extends World {
     extendedStep(frameTime: number, timeOut: number) {
         //world.step(frameTime, delta, 1);
         this.step(frameTime);
-        console.log(this.stepnumber);
 
         if (this.render) {
 
@@ -533,58 +534,5 @@ export class ExtendedWorld extends World {
         }
         object3D.removeFromParent(); // the parent might be the scene or another Object3D, but it is sure to be removed this way
         return true;
-    }
-
-    /**
-     * Generates a new random vehicle. This vehicle hax a maximum length of 5 and a maximum width/height of 2 meters.
-     * The amount, placement and size of wheels is also randomly generated. The wheel radius and width have a maximum size of 1 meter.
-     * The wheel position is generated according to the size of the vehicle body, so that the wheels center has to always touch the body.
-     */
-    createRandomCar(): vehicleGenome {
-        //GenerateRandomCar Here
-        let vehicle: vehicleGenome = {
-            baseWeight: 10 + this.roundToFour(Math.random() * 200), //base weigth - influences the cars calculated weight and its engine power
-            bodyVectors: [],
-            wheels: []
-        };
-
-        //Minimum 4 vectors.
-        let bodyVectorAmount = 4 + Math.floor( Math.random() * 5);
-
-        for (let i = 0; i < bodyVectorAmount; i++) {
-            let x = this.roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 6));
-            let y = this.roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 6));
-            let z = this.roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 6));
-            vehicle.bodyVectors.push(new CANNON.Vec3(x, y, z));
-        }
-
-        let wheelAmount = Math.floor(Math.random() * 10);
-
-        //TODO How to handle 'incorrect' wheels
-        // fe wheels that would spawn too far away from the car
-        for (let j = 0; j < wheelAmount; j++) {
-            let wheel: wheel = {
-                radius: (this.roundToFour(Math.max(1, Math.random() * 3))), //wheel radius [1.5, 3)
-                width: (this.roundToFour(2.5 - Math.random())), //wheel width (1.5, 2.5]
-
-                //Try to generate wheels which are touching the car
-                posX: this.roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 3), //wheel position lengthwise
-                posY: this.roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 3), //wheel position height
-                posZ: this.roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 3), //wheel position width
-
-
-                density: Math.ceil(Math.random() * 5),
-                canSteer: Math.floor(Math.random() * 2) === 1,
-            };
-
-            vehicle.wheels.push(wheel);
-        }
-
-        return vehicle;
-    }
-
-    // custom round function
-    roundToFour(num: number) {
-        return +(Math.round(num * 10000) / 10000);
     }
 }

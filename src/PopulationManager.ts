@@ -1,6 +1,7 @@
 import {ExtendedRigidVehicle} from "./ExtendedRigidVehicle";
 import {vehicleGenome, wheel} from "./ExtendedWorld";
 import * as CANNON from "cannon-es";
+import {createRandomBodyVector, createRandomWheel} from "./Utils/VehicleGeneration";
 
 export type fitnessData = {
     id: number,
@@ -57,7 +58,7 @@ export class PopulationManager {
                     distanceTraveled: car.furthestPosition.x,
                     hasFinished: car.hasFinished,
                     timeInSteps: stepNumber,
-                    fitness: this.calculateFitness(stepNumber, car.hasFinished, car.furthestPosition.x),
+                    fitness: PopulationManager.calculateFitness(stepNumber, car.hasFinished, car.furthestPosition.x),
                 }
             )
 
@@ -74,19 +75,16 @@ export class PopulationManager {
         this.mutationRate = mutationRate;
 
         let tournamentSelection: vehicleGenome[] = [];
-        let tournamentSelection2: fitnessData[] = [];
         let newGeneration: vehicleGenome[] = [];
 
-        this.fitnessData.forEach((carA, carAPlacement) => {
+        this.fitnessData.forEach((carA) => {
             let carBPlacement = Math.floor(Math.random() * this.fitnessData.length);
             if (carA.fitness > this.fitnessData[carBPlacement].fitness) {
                 if (carA.oldVehicleGen) {
                     tournamentSelection.push(carA.oldVehicleGen);
                 }
-                tournamentSelection2.push(carA);
             } else {
                 tournamentSelection.push(this.fitnessData[carBPlacement].oldVehicleGen);
-                tournamentSelection2.push(this.fitnessData[carBPlacement]);
             }
         });
 
@@ -101,7 +99,7 @@ export class PopulationManager {
             let parent1 = tournamentSelection[Math.floor(Math.random() * this.populationSize)];
             let parent2 = tournamentSelection[Math.floor(Math.random() * this.populationSize)];
 
-            let children = this.crossOver(parent1, parent2);
+            let children = this.twoPartCrossOver(parent1, parent2);
             newGeneration.push(this.mutateVehicle(children[0]));
             newGeneration.push(this.mutateVehicle(children[1]));
         }
@@ -116,39 +114,42 @@ export class PopulationManager {
             vehicleGen.baseWeight = vehicleGen.baseWeight * (1 + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() / 10);
         }
 
-        let baseMutationPosition = 0.5;
-        //increase/decrease random vector variable by up to 50 centimeters.
+        let maxMutation = 1;
+        //increase/decrease random vector variable by up to 1 Meter.
         vehicleGen.bodyVectors.forEach(vector => {
             if (this.mutate()) {
-                vector.x = vector.x + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * baseMutationPosition;
+                vector.x = vector.x + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation;
             }
             if (this.mutate()) {
-                vector.y = vector.y + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * baseMutationPosition;
+                vector.y = vector.y + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation;
             }
             if (this.mutate()) {
-                vector.z = vector.z + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * baseMutationPosition;
+                vector.z = vector.z + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation;
             }
         })
 
-        //increase/decrease random vector variable by up to 10 percent.
+        //increase/decrease random vector variable by up to 50 centimeters percent.
         vehicleGen.wheels.forEach(wheel => {
             if (this.mutate()) {
-                wheel.radius = wheel.radius + + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * 0.3;
+                wheel.radius = wheel.radius + + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation / 2;
             }
             if (this.mutate()) {
-                wheel.density = wheel.density + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * 2;
+                wheel.density = wheel.density + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation;
             }
             if (this.mutate()) {
-                wheel.width = wheel.width + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * 0.3;
+                wheel.width = wheel.width + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation / 2;
             }
             if (this.mutate()) {
-                wheel.posX = wheel.posX + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * baseMutationPosition;
+                wheel.stiffness = Math.random();
             }
             if (this.mutate()) {
-                wheel.posY = wheel.posY + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * baseMutationPosition;
+                wheel.posX = wheel.posX + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation;
             }
             if (this.mutate()) {
-                wheel.posZ = wheel.posZ + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * baseMutationPosition;
+                wheel.posY = wheel.posY + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation;
+            }
+            if (this.mutate()) {
+                wheel.posZ = wheel.posZ + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation;
             }
             if (this.mutate()) {
                 wheel.canSteer = !wheel.canSteer;
@@ -164,10 +165,7 @@ export class PopulationManager {
 
         //add random new bodyVector
         if (this.mutate()) {
-            let x = (Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 6);
-            let y = (Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 6);
-            let z = (Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * 6);
-            vehicleGen.bodyVectors.push(new CANNON.Vec3(x, y, z));
+            vehicleGen.bodyVectors.push(createRandomBodyVector());
         }
 
         //remove random existing wheel
@@ -178,41 +176,44 @@ export class PopulationManager {
 
         //add random new wheel
         if (this.mutate()) {
-            let wheel: wheel = {
-                radius: Math.max(1.5, Math.random() * 3), //wheel radius [1.5, 3)
-                width: 2.5 - Math.random(), //wheel width (1.5, 2.5]
-
-                posX: (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * (Math.random() * 3), //wheel position lengthwise
-                posY: (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * (Math.random() * 3), //wheel position height
-                posZ: (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * (Math.random() * 3), //wheel position width
-
-                density: 10,
-                canSteer: Math.floor(Math.random() * 2) === 0
-            }
-            vehicleGen.wheels.push(wheel);
+            vehicleGen.wheels.push(createRandomWheel());
         }
         return vehicleGen;
     }
 
+    /**
+     * Simple function that randomly returns true according to the value of this.mutationRate.
+     */
     mutate(): boolean {
         return Math.random() < this.mutationRate;
     }
 
-    crossOver(parent1: vehicleGenome, parent2: vehicleGenome): vehicleGenome[] {
-
+    /**
+     * Crosses the two given vehicleGenomes at two points. For that purpose the vehicleGenomes are first turned into
+     * These points are randomly choosen, but one of them is always
+     * inside the bodyVectors and the other one always inside the wheels.
+     * @param parent1
+     * @param parent2
+     */
+    twoPartCrossOver(parent1: vehicleGenome, parent2: vehicleGenome): vehicleGenome[] {
         let parent1Arr = this.toSplitArray(parent1);
         let parent2Arr = this.toSplitArray(parent2);
 
-        let bodies = this.splitCrossOverHelper(parent1Arr[0], parent2Arr[0]);
-        let wheels = this.splitCrossOverHelper(parent1Arr[1], parent2Arr[1]);
+        let bodies = this.twoPartCrossOverHelper(parent1Arr[0], parent2Arr[0]);
+        let wheels = this.twoPartCrossOverHelper(parent1Arr[1], parent2Arr[1]);
 
         let child1 = bodies[0].concat(wheels[0]);
         let child2 = bodies[1].concat(wheels[1]);
         return [this.toGenome(child1, bodies[0].length), this.toGenome(child2, bodies[1].length)];
     }
 
-    splitCrossOverHelper(parent1: number[], parent2: number[]) {
-        let firstSplit = 0;
+    /**
+     *
+     * @param parent1
+     * @param parent2
+     */
+    twoPartCrossOverHelper(parent1: number[], parent2: number[]) {
+        let firstSplit: number;
 
         if (parent1.length - parent2.length > 0) {
             firstSplit = Math.floor(Math.random() * parent2.length);
@@ -236,14 +237,13 @@ export class PopulationManager {
      * @param distance the vehicle has traveled.
      * @private
      */
-    private calculateFitness(stepNumber: number, hasFinished: boolean, distance: number): number {
-        return hasFinished ? distance + 2 * distance * 100000 / stepNumber : distance;
+    private static calculateFitness(stepNumber: number, hasFinished: boolean, distance: number): number {
+        return hasFinished ? distance + distance * 1000 / stepNumber : distance;
     }
 
     /**
      * Returns the given vehicleGenome as an Array. Creates dummyVectors if needed.
      * @param vehicleGen
-     * @param amountOfDummyVectors
      */
     toSplitArray(vehicleGen: vehicleGenome): number[][] {
         let bodyAsArray: number[] = [];
@@ -260,6 +260,7 @@ export class PopulationManager {
             wheelAsArray.push(wheel.radius);
             wheelAsArray.push(wheel.width);
             wheelAsArray.push(wheel.density);
+            wheelAsArray.push(wheel.stiffness);
             wheelAsArray.push(wheel.posX);
             wheelAsArray.push(wheel.posY);
             wheelAsArray.push(wheel.posZ);
@@ -291,12 +292,13 @@ export class PopulationManager {
                 radius: vehicleGen[counter + 1],
                 width: vehicleGen[counter + 2],
                 density: vehicleGen[counter + 3],
-                posX: vehicleGen[counter + 4],
-                posY: vehicleGen[counter + 5],
-                posZ: vehicleGen[counter + 6]
+                stiffness: vehicleGen[counter + 4],
+                posX: vehicleGen[counter + 5],
+                posY: vehicleGen[counter + 6],
+                posZ: vehicleGen[counter + 7]
             };
             wheels.push(wheel);
-            counter = counter + 7;
+            counter = counter + 8;
         }
 
         return {

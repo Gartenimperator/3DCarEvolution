@@ -2,12 +2,11 @@
  * Chart.js
  */
 
-import Chart, {ChartData} from "chart.js/auto";
+import Chart from "chart.js/auto";
 import {fitnessData} from "./PopulationManager";
 
 export class DataStore {
 
-    distanceTraveledData: number[][] = [];
     fitnessDataStore: fitnessData[][] = [];
 
     chart: any;
@@ -118,6 +117,9 @@ export class DataStore {
                                         }
                                         return `Place Nr. ${context[0].datasetIndex}`;
                                     }
+                                },
+                                afterLabel: function (context) {
+                                    return 'test';
                                 }
                             }
                         }

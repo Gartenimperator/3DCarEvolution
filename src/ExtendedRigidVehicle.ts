@@ -19,24 +19,16 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     vehicleMass: number = 0;
     id: number;
     wheelMaterial = new THREE.MeshLambertMaterial({
-        color: 0x191919,
-        //transparent: true,
-        //opacity: 1.0
+        color: 0x191919
     });
-    wheelHoodMaterial = new THREE.MeshPhongMaterial({
-        color: 0xC0C0C0,
-        //transparent: true,
-        //opacity: 1.0
+    wheelHoodMaterial = new THREE.MeshLambertMaterial({
+        color: 0xC0C0C0
     });
     bodyMaterial = new THREE.MeshBasicMaterial({
-        color: 0xC4151C,
-        //transparent: true,
-        //opacity: 1.0
+        color: 0xC4151C
     });
     lineMaterial = new THREE.LineBasicMaterial({
-        color: 0x0000ff,
-        //transparent: true,
-        //opacity: 1.0
+        color: 0x0000ff
     });
     vehicleGen: vehicleGenome;
     faces: number[][];
@@ -98,7 +90,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         this.bodyMass = this.vehicleGen.baseWeight;
 
-        var chassisBody = new CANNON.Body({
+        let chassisBody = new CANNON.Body({
             mass: this.bodyMass,
             material: bodyMaterial,
             position: new CANNON.Vec3(0, 10, 0),
@@ -126,8 +118,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      */
     private addWheels(physicalWheelMaterial: CANNON.Material | undefined, scene: THREE.Scene | undefined) {
         //Add wheels to the car.
-        let newWheels: wheel[] = [];
-        for (var i = 0; i < this.vehicleGen.wheels.length; i++) {
+        for (let i = 0; i < this.vehicleGen.wheels.length; i++) {
 
             let laysInsideShape = isPointInsideHull([this.vehicleGen.wheels[i].posX, this.vehicleGen.wheels[i].posY, this.vehicleGen.wheels[i].posZ], this.toNumberArray(this.vehicleGen.bodyVectors), this.faces);
 
@@ -140,6 +131,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                     this.vehicleGen.wheels[i].posY, //height - y
                     this.vehicleGen.wheels[i].posZ, //width - z
                     this.vehicleGen.wheels[i].density,
+                    this.vehicleGen.wheels[i].stiffness,
                     this.vehicleGen.wheels[i].canSteer,
                     physicalWheelMaterial,
                     scene
@@ -187,6 +179,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param positionY
      * @param positionZ
      * @param density of the wheel.
+     * @param stiffness
      * @param physicalWheelMaterial of the wheel. If the param is undefined no physical CANNON.Body will be created.
      * @param canSteer defines if the wheel is steerable or not.
      * @param scene the wheel is placed inside of. If the param is undefined no visual THREE.Mesh will be created.
@@ -198,13 +191,14 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         positionY: number,
         positionZ: number,
         density: number,
+        stiffness: number,
         canSteer: boolean,
         physicalWheelMaterial: CANNON.Material,
         scene: THREE.Scene | undefined
     ) {
         //Add wheel physical body
         if (physicalWheelMaterial) {
-            this.addPhysicalWheel(radius, width, positionX, positionY, positionZ, density, physicalWheelMaterial, canSteer);
+            this.addPhysicalWheel(radius, width, positionX, positionY, positionZ, density, stiffness, physicalWheelMaterial, canSteer);
         }
 
         //Add wheel visual body
@@ -221,6 +215,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param positionY
      * @param positionZ
      * @param density
+     * @param stiffness
      * @param physicalWheelMaterial of the wheel.
      * @param canSteer defines if the wheel is steerable or not.
      * @private
@@ -231,6 +226,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                              positionY: number,
                              positionZ: number,
                              density: number,
+                             stiffness: number,
                              physicalWheelMaterial: CANNON.Material,
                              canSteer: boolean) {
         const wheelVolume = Math.PI * width * (radius * radius);
@@ -256,10 +252,10 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             axis: new CANNON.Vec3(0, 0, -1)
         });
 
-        this.constraints[this.wheelBodies.length - 1].equations[1].setSpookParams(10000, 6, 1/60);
+        this.constraints[this.wheelBodies.length - 1].equations[1].setSpookParams(Math.max(4000, 20000 * stiffness), 6, 1/60);
 
         this.vehicleMass = this.vehicleMass + wheelMass;
-        let wheelForce = 0;
+        let wheelForce: number;
 
         if (wheelMass < 20) {
             wheelForce = wheelMass * 7;
@@ -310,9 +306,10 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         wheelVisual.rotateY(Math.PI / 2);
         wheelHood.rotateY(Math.PI / 2);
 
-        var wheelMesh = new THREE.Mesh(wheelVisual, this.wheelMaterial);
+        let wheelMesh = new THREE.Mesh(wheelVisual, this.wheelMaterial);
         wheelMesh.add(new THREE.Mesh(wheelHood, this.wheelHoodMaterial));
         wheelMesh.add(new THREE.Mesh(new THREE.BoxGeometry(radius * 0.6, radius * 0.2, width * 1.2), this.wheelMaterial));
+        wheelMesh.add(new THREE.Mesh(new THREE.BoxGeometry(radius * 2, radius * 0.2, width * 0.95), this.wheelHoodMaterial));
         scene.add(wheelMesh);
         this.wheelMeshes.push(wheelMesh);
     }
@@ -360,13 +357,12 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      */
     disable() {
         if (this.visualBody.material instanceof Material) {
-            //this.visualBody.material.opacity = 0.3;
-            //this.lineMaterial.opacity = 0.4;
+            this.lineMaterial.color = new THREE.Color('white');
         }
 
         this.wheelMeshes.forEach(wheel => {
             if (wheel.material instanceof Material) {
-                //wheel.material.opacity = 0.4;
+                wheel.material.opacity = 0.3;
             }
         });
     }
