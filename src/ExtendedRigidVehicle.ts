@@ -230,7 +230,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                              physicalWheelMaterial: CANNON.Material,
                              canSteer: boolean) {
         const wheelVolume = Math.PI * width * (radius * radius);
-        let wheelMass = Math.max(1, wheelVolume * density);
+        let wheelMass = Math.max(10, wheelVolume * density * 5);
 
         let wheelBody = new CANNON.Body({
             mass: wheelMass,
@@ -244,7 +244,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         const rotateParallelToXAxis = new CANNON.Quaternion().setFromEuler(Math.PI / 2, 0, 0);
         const shape = new CANNON.Cylinder(radius, radius, width, 25);
         wheelBody.addShape(shape, new CANNON.Vec3(), rotateParallelToXAxis);
-        wheelBody.angularDamping = 0.4;
+        wheelBody.angularDamping = 0.7;
 
         this.addWheel({
             body: wheelBody,
@@ -252,30 +252,12 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             axis: new CANNON.Vec3(0, 0, -1)
         });
 
-        this.constraints[this.wheelBodies.length - 1].equations[1].setSpookParams(Math.max(4000, 20000 * stiffness), 6, 1/60);
+        this.constraints[this.wheelBodies.length - 1].equations[1].setSpookParams(Math.max(4000, 20000 * stiffness + wheelMass), 6, 1/60);
 
         this.vehicleMass = this.vehicleMass + wheelMass;
         let wheelForce: number;
 
-        if (wheelMass < 20) {
-            wheelForce = wheelMass * 7;
-            wheelBody.angularDamping = 0.5;
-        } else {
-            wheelForce = wheelMass * 11;
-            wheelBody.angularDamping = 0.6;
-        }
-
-        if (wheelMass > 100) {
-            wheelForce = wheelForce + 1.4 * wheelMass;
-        }
-
-        if (wheelMass > 150) {
-            wheelForce = wheelForce + 2 * wheelMass;
-        }
-
-        if (wheelMass > 200) {
-            wheelForce = wheelForce + 3 * wheelMass;
-        }
+        wheelForce = Math.min(8000 + wheelVolume * density, this.bodyMass + wheelVolume * density * wheelVolume * density * 1.5);
 
         if (canSteer) {
             wheelForce = wheelForce * 2 / 3; //Steerable wheels get a small punishment by power reduction.

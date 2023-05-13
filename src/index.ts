@@ -69,7 +69,7 @@ let trackTexture: THREE.MeshStandardMaterial;
 //Genetic-Algorithm global variables
 let amountOfWorlds: number = 1;
 
-let batchSize: number = 1;
+let batchSize: number = 40;
 let amountOfBatches: number = 5;
 
 let mutationRate = 0.05;

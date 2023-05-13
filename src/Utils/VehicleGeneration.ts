@@ -16,7 +16,7 @@ export function createRandomCar(): vehicleGenome {
     };
 
     //Minimum 4 vectors.
-    let bodyVectorAmount = 4 + Math.floor(Math.random() * 8);
+    let bodyVectorAmount = 4 + Math.floor(Math.random() * 12);
 
     for (let i = 0; i < bodyVectorAmount; i++) {
         vehicle.bodyVectors.push(createRandomBodyVector());
@@ -36,12 +36,12 @@ export function createRandomWheel(): wheel {
         width: (roundToFour(2.5 - Math.random())), //wheel width (1.5, 2.5]
 
         //Try to generate wheels which are touching the car
-        posX: roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 3), //wheel position lengthwise
-        posY: roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 3), //wheel position height
-        posZ: roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 3), //wheel position width
+        posX: roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 5), //wheel position lengthwise
+        posY: roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 5), //wheel position height
+        posZ: roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 5), //wheel position width
 
         stiffness: Math.random(),
-        density: Math.ceil(Math.random() * 5),
+        density: Math.random() * 2,
         canSteer: Math.floor(Math.random() * 2) === 1,
     };
 }
