@@ -86,9 +86,14 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         this.faces = facesTriangulized;
 
-        this.vehicleMass = this.vehicleMass + this.bodyMass;
 
-        this.bodyMass = this.vehicleGen.baseWeight;
+        let temp = new CANNON.ConvexPolyhedron({
+            vertices: this.vehicleGen.bodyVectors,
+            face: this.faces
+        });
+
+        this.vehicleMass = temp.volume();
+        this.bodyMass = temp.volume();
 
         let chassisBody = new CANNON.Body({
             mass: this.bodyMass,
@@ -252,23 +257,9 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             axis: new CANNON.Vec3(0, 0, -1)
         });
 
-        this.constraints[this.wheelBodies.length - 1].equations[1].setSpookParams(Math.max(4000, 20000 * stiffness + wheelMass), 6, 1/60);
+        this.constraints[this.wheelBodies.length - 1].equations[1].setSpookParams(Math.max(4000, 20000 * stiffness + wheelMass), 6, 1 / 60);
 
         this.vehicleMass = this.vehicleMass + wheelMass;
-        let wheelForce: number;
-
-        wheelForce = Math.min(8000 + wheelVolume * density, this.bodyMass + wheelVolume * density * wheelVolume * density * 1.5);
-
-        if (canSteer) {
-            wheelForce = wheelForce * 2 / 3; //Steerable wheels get a small punishment by power reduction.
-        }
-
-        this.setWheelForce(
-            wheelForce,
-            this.wheelBodies.length - 1
-        );
-
-        //this.setMotorSpeed(0, this.wheelBodies.length - 1);
     }
 
     /**
@@ -403,18 +394,21 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * Update the steering angle of each wheel.
      * @param trackWidth width of the track the vehicle is currently driving on.
      */
-    updateSteering(trackWidth: number) {
+    updateSteeringAndApplyPower(trackWidth: number) {
         this.activeWheels.forEach((wheel, i) => {
-
             let positionZ = this.chassisBody.position.z;
-            if (wheel.canSteer && (positionZ < -trackWidth / 10 || positionZ > trackWidth / 10)) {
 
+            if (wheel.canSteer && (positionZ < -trackWidth / 10 || positionZ > trackWidth / 10)) {
                 let steeringValue = Math.max(-0.6, Math.min(0.6, positionZ / trackWidth));
                 this.setSteeringValue(steeringValue, i);
             } else {
                 this.setSteeringValue(0, i);
             }
-        })
+
+            if (this.wheelBodies[i].angularVelocity.length() < 10) {
+                this.applyWheelForce(2000, i);
+            }
+        });
     }
 
     private toNumberArray(bodyVectors: CANNON.Vec3[]) {

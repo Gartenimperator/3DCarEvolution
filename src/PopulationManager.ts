@@ -102,11 +102,6 @@ export class PopulationManager {
 
     mutateVehicle(vehicleGen: vehicleGenome): vehicleGenome {
 
-        //increase/decrease base weight by up to 10 percent.
-        if (this.mutate()) {
-            vehicleGen.baseWeight = vehicleGen.baseWeight * (1 + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() / 10);
-        }
-
         let maxMutation = 1;
         //increase/decrease random vector variable by up to 1 Meter.
         vehicleGen.bodyVectors.forEach(vector => {
@@ -240,7 +235,6 @@ export class PopulationManager {
      */
     toSplitArray(vehicleGen: vehicleGenome): number[][] {
         let bodyAsArray: number[] = [];
-        bodyAsArray.push(vehicleGen.baseWeight);
         for (let i = 0; i < vehicleGen.bodyVectors.length; i++) {
             bodyAsArray.push(vehicleGen.bodyVectors[i].x);
             bodyAsArray.push(vehicleGen.bodyVectors[i].y);
@@ -266,10 +260,9 @@ export class PopulationManager {
      * Returns the vehicle genome as an Array for the crossover and mutation process.
      */
     toGenome(vehicleGen: number[], amountOfBodyVectors: number): vehicleGenome {
-
         let bodyVectors = [];
         let wheels: wheel[] = [];
-        let counter = 1;
+        let counter = 0;
 
         //TODO insert error here if mod 3 != 0
 
@@ -295,7 +288,6 @@ export class PopulationManager {
         }
 
         return {
-            baseWeight: vehicleGen[0],
             bodyVectors: bodyVectors,
             wheels: wheels
         };

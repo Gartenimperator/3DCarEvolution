@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module';
-import {ExtendedWorld, vehicleGenome} from "./ExtendedWorld";
+import {ExtendedWorld} from "./ExtendedWorld";
 import {WorldManager} from "./WorldManager";
 
 // Detects webgl
@@ -84,6 +84,8 @@ let currentGen = 0;
 
 let simulateThisGeneration = true;
 let isPaused = false;
+let fastForwardCounter: number = 0;
+let fastForward: boolean = false;
 
 /**
  * WorldManager
@@ -103,6 +105,8 @@ let stopBtn = document.getElementById("stopBtn");
 let continueBtn = document.getElementById("continueBtn");
 let newPopulationBtn = document.getElementById("startSimulationBtn");
 let updateVariablesBtn = document.getElementById('updateVariables');
+let fastForwardInput = document.getElementById('fastForward');
+let fastForwardBtn = document.getElementById('fastForwardBtn');
 let autoRunCheckbox = document.getElementById('autoRunCheckbox');
 let gravityInput = document.getElementById('gravity');
 let gravityInputError = document.getElementById('gravityInputError');
@@ -127,23 +131,29 @@ let infoText = document.getElementById('currentBatchInfo');
  * Input listeners
  */
 
-function updateButtons(disableStopBtn: boolean, disableContinueBtn: boolean, disableNewPopulationBtn: boolean, disableNextGenBtn: boolean) {
+function updateButtons(disableStopBtn: boolean, disableContinueBtn: boolean, disableNewPopulationBtn: boolean, disableNextGenBtn: boolean, disableFFBtn: boolean) {
     stopBtn.disabled = disableStopBtn;
     continueBtn.disabled = disableContinueBtn;
     newPopulationBtn.disabled = disableNewPopulationBtn;
     nextGenBtn.disabled = disableNextGenBtn;
+    fastForwardBtn.disabled = disableFFBtn;
 }
 
 function next() {
     initGraphics();
-    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions);
+    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions, false);
     currentWorld.initTrackWithGradients(trackGradients, trackPieceLengthX, trackTexture, scene);
     currentWorld.cameraFocus.add(camera);
 }
 
-function resetInputFields() {
+function updateInfoText() {
     infoText.innerHTML = 'Generation ' + worldManager.currentGen + '. Currently simulating batch ' + (1 + worldManager.currentBatch) + ' of world ' + worldManager.worldCounter + '.' +
         '\n Populationsize: ' + (worldManager.batchSize * (worldManager.batchAmount + 1));
+    fastForwardInput.value = fastForwardCounter;
+}
+
+function resetInputFields() {
+    updateInfoText();
     hideErrorMsgs();
     gravityInput.value = gravity;
     batchSizeInput.value = batchSize;
@@ -153,6 +163,7 @@ function resetInputFields() {
     trackInput.value = trackGradients;
     trackPieceLengthXInput.value = trackPieceLengthX;
     variablesInputConfirmation.hidden = true;
+    autoRunCheckbox.disabled = false;
 }
 
 function hideErrorMsgs() {
@@ -167,10 +178,10 @@ function hideErrorMsgs() {
 
 function startSimulation() {
     simulateThisGeneration = true;
-    updateButtons(false, true, false, true);
+    updateButtons(false, true, false, true, false);
 
     initGraphics();
-    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions);
+    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions, false);
     currentWorld.initTrackWithGradients(trackGradients, trackPieceLengthX, trackTexture, scene);
     currentWorld.cameraFocus.add(camera);
     resetInputFields();
@@ -178,7 +189,7 @@ function startSimulation() {
 
 function restartSimulation() {
     simulateThisGeneration = true;
-    updateButtons(false, true, false, true);
+    updateButtons(false, true, false, true, false);
     worldManager.reset(batchSize, amountOfBatches);
     resetInputFields();
     next();
@@ -191,17 +202,28 @@ function newPopulation() {
 function stopSimulation() {
     simulateThisGeneration = false;
     isPaused = true;
-    updateButtons(true, false, false, false);
+    updateButtons(true, false, false, false, false);
 }
 
 function continueSimulation() {
     simulateThisGeneration = true;
-    updateButtons(false, true, false, true);
+    updateButtons(false, true, false, true, false);
 }
 
 // custom round function
 function roundToFive(num: number) {
     return +(Math.round(num * 100000) / 100000);
+}
+
+function fastForwardFct() {
+    let amount = parseInt(fastForwardInput.value);
+    if (amount > 0) {
+        updateButtons(true, true, true, true, true);
+        fastForwardCounter = amount;
+        autoRunCheckbox.checked = true;
+        autoRunCheckbox.disabled = true;
+        simulateThisGeneration = true;
+    }
 }
 
 function updateVariables() {
@@ -277,7 +299,8 @@ function updateVariables() {
     }
 }
 
-nextGenBtn.addEventListener("click", simulateNextGeneration);
+fastForwardBtn.addEventListener('click', fastForwardFct);
+nextGenBtn.addEventListener("click", simulateNext);
 stopBtn.addEventListener("click", stopSimulation);
 continueBtn.addEventListener("click", continueSimulation);
 newPopulationBtn.addEventListener("click", newPopulation);
@@ -340,11 +363,19 @@ function initGraphics() {
     )
 }
 
-function simulateNextGeneration() {
+function simulateNext() {
     next();
-    simulateThisGeneration = true;
-    updateButtons(false, true, false, true);
-    resetInputFields();
+
+    //Only fastForward after the current Generation has finished.
+    if (fastForwardCounter > 0) {
+        fastForward = true;
+        updateInfoText();
+    } else {
+        fastForward = false;
+        simulateThisGeneration = true;
+        updateButtons(false, true, false, true, false);
+        resetInputFields();
+    }
 }
 
 /**
@@ -371,14 +402,23 @@ function render() {
 
     camera.copy(fakeCamera);
     requestAnimationFrame(render);
-
-    if (currentWorld.isActive() && simulateThisGeneration) {
-        updatePhysics();
-    } else if (autoRunCheckbox.checked && simulateThisGeneration) {
-        simulateNextGeneration();
-    }
     renderer.render(scene, camera);
-    stats.update();
+
+    if (fastForward && fastForwardCounter > 0) {
+        while (currentWorld.isActive()) {
+            updatePhysics();
+        }
+        fastForwardCounter--;
+        simulateNext();
+    } else {
+
+        if (currentWorld.isActive() && simulateThisGeneration) {
+            updatePhysics();
+        } else if (autoRunCheckbox.checked && simulateThisGeneration) {
+            simulateNext();
+        }
+        stats.update();
+    }
 }
 
 /**

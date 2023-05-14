@@ -10,7 +10,6 @@ import {vehicleGenome, wheel} from "../ExtendedWorld";
 export function createRandomCar(): vehicleGenome {
     //GenerateRandomCar Here
     let vehicle: vehicleGenome = {
-        baseWeight: 10 + roundToFour(Math.random() * 200), //base weigth - influences the cars calculated weight and its engine power
         bodyVectors: [],
         wheels: []
     };
@@ -41,7 +40,7 @@ export function createRandomWheel(): wheel {
         posZ: roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * 5), //wheel position width
 
         stiffness: Math.random(),
-        density: Math.random() * 2,
+        density: Math.random() + 1,
         canSteer: Math.floor(Math.random() * 2) === 1,
     };
 }

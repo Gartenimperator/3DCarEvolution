@@ -2,7 +2,6 @@
  * Manages the Batches and parallel Worlds.
  */
 import {ExtendedWorld, vehicleGenome} from "./ExtendedWorld";
-import * as THREE from "three";
 import {PopulationManager} from "./PopulationManager";
 import {DataStore} from "./DataStore";
 
@@ -34,7 +33,8 @@ export class WorldManager {
     next(scene,
          worldOptions,
          gravity,
-         groundBodyContactMaterialOptions
+         groundBodyContactMaterialOptions,
+         fastForward
     ) {
         this.currentWorld?.cleanUpCurrentGeneration(true);
 
@@ -64,7 +64,7 @@ export class WorldManager {
             this.worldIdCounter++,
             population ? population : [],
             this.currentPopulationManager,
-            true
+            !fastForward
         );
         return this.currentWorld;
     }

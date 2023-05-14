@@ -4,7 +4,7 @@ import CannonDebugger from "cannon-es-debugger";
 import {ExtendedRigidVehicle} from "./ExtendedRigidVehicle";
 import {PopulationManager} from "./PopulationManager";
 import {Groups} from "./Groups";
-import {Mesh, Object3D, Scene} from "three";
+import {Mesh, Object3D} from "three";
 import * as THREE from "three";
 import {createRandomCar} from "./Utils/VehicleGeneration";
 
@@ -51,7 +51,6 @@ export type wheel = {
  * are perfect copies of each other.
  */
 export type vehicleGenome = {
-    baseWeight: number,
     bodyVectors: CANNON.Vec3[],
     wheels: wheel[],
 }
@@ -120,7 +119,6 @@ export class ExtendedWorld extends World {
 
         this.leadingCar = new ExtendedRigidVehicle({
             bodyVectors: [],
-            baseWeight: 1,
             wheels: []
         }, undefined, undefined, undefined, -1);
         this.leadingCar.chassisBody.position.set(-1, 0, 0);
@@ -155,6 +153,7 @@ export class ExtendedWorld extends World {
     /**
      * Add a single vehicle to the world according to its passed genome.
      * @param vehicleGenome which details the vehicle.
+     * @param scene
      */
     addCar(vehicleGenome: vehicleGenome, scene: any) {
 
@@ -214,7 +213,7 @@ export class ExtendedWorld extends World {
             //Update position of cars inside the scene.
             this.populationManager.activeCars.forEach((car) => {
                 this.advanceTimeout(car, timeOut);
-                car.updateSteering(this.track.trackWidth);
+                car.updateSteeringAndApplyPower(this.track.trackWidth);
                 this.updateScene(car);
             });
 
@@ -227,7 +226,7 @@ export class ExtendedWorld extends World {
             //Update only the cars physical body.
             this.populationManager.activeCars.forEach((car) => {
                 this.advanceTimeout(car, timeOut);
-                car.updateSteering(this.track.trackWidth);
+                car.updateSteeringAndApplyPower(this.track.trackWidth);
             });
 
             if (this.populationManager.activeCars.size === 0) {
@@ -311,7 +310,7 @@ export class ExtendedWorld extends World {
             wheelGroundOptions
         );
 
-        wheelGroundOptions.friction = 0.8;
+        wheelGroundOptions.friction = 0.6;
         let wheelGroundContactMaterialHighFriction = new CANNON.ContactMaterial(
             this.wheelMaterialHighFriction,
             this.groundMaterial,
@@ -361,6 +360,7 @@ export class ExtendedWorld extends World {
      * @param gradients which detail the track.
      * @param length of each track piece.
      * @param trackTexture defines the visual representation of the track.
+     * @param scene
      */
     initTrackWithGradients(gradients: number[], length: number, trackTexture: THREE.MeshStandardMaterial, scene) {
 
