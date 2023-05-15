@@ -92,8 +92,8 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             face: this.faces
         });
 
-        this.vehicleMass = temp.volume();
-        this.bodyMass = temp.volume();
+        this.vehicleMass = temp.volume() * 3;
+        this.bodyMass = temp.volume() * 3;
 
         let chassisBody = new CANNON.Body({
             mass: this.bodyMass,
@@ -235,7 +235,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                              physicalWheelMaterial: CANNON.Material,
                              canSteer: boolean) {
         const wheelVolume = Math.PI * width * (radius * radius);
-        let wheelMass = Math.max(10, wheelVolume * density * 5);
+        let wheelMass = Math.max(5, wheelVolume * density);
 
         let wheelBody = new CANNON.Body({
             mass: wheelMass,
@@ -405,8 +405,9 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                 this.setSteeringValue(0, i);
             }
 
-            if (this.wheelBodies[i].angularVelocity.length() < 10) {
-                this.applyWheelForce(2000, i);
+            if (this.wheelBodies[i].angularVelocity.length() < 15) {
+                let fctOne = this.bodyMass * this.wheelBodies[i].mass * 1 / 2 - this.wheelBodies[i].mass;
+                this.applyWheelForce(fctOne, i);
             }
         });
     }

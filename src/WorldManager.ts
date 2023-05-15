@@ -57,7 +57,7 @@ export class WorldManager {
         let population = this.populationStore.get(this.worldCounter)?.slice(this.batchSize * this.currentBatch, this.batchSize * this.currentBatch + this.batchSize);
 
         this.currentWorld = new ExtendedWorld(
-            scene,
+            fastForward ? undefined : scene,
             worldOptions,
             gravity,
             groundBodyContactMaterialOptions,
