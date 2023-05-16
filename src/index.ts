@@ -416,6 +416,7 @@ function render() {
         } else if (autoRunCheckbox.checked && simulateThisGeneration) {
             simulateNext();
         }
+        currentWorld.cannonDebugRenderer.update();
         stats.update();
     }
 }

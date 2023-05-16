@@ -116,28 +116,28 @@ export class PopulationManager {
             }
         })
 
-        //increase/decrease random vector variable by up to 50 centimeters percent.
+        //increase/decrease random vector variable by up to 50 centimeters.
         vehicleGen.wheels.forEach(wheel => {
             if (this.mutate()) {
-                wheel.radius = wheel.radius + + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation / 2;
+                wheel.radius = Math.max(0.2, wheel.radius + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation / 2);
             }
             if (this.mutate()) {
-                wheel.density = wheel.density + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation;
+                wheel.density = Math.max(0.2, wheel.density + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation);
             }
             if (this.mutate()) {
-                wheel.width = wheel.width + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation / 2;
+                wheel.width = Math.max(0.2, wheel.width + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation / 2);
             }
             if (this.mutate()) {
                 wheel.stiffness = Math.random();
             }
             if (this.mutate()) {
-                wheel.posX = wheel.posX + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation;
+                wheel.posX = wheel.posX + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation * 2;
             }
             if (this.mutate()) {
-                wheel.posY = wheel.posY + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation;
+                wheel.posY = wheel.posY + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation * 2;
             }
             if (this.mutate()) {
-                wheel.posZ = wheel.posZ + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation;
+                wheel.posZ = wheel.posZ + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutation * 2;
             }
             if (this.mutate()) {
                 wheel.canSteer = !wheel.canSteer;

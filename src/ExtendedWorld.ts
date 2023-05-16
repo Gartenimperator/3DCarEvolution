@@ -123,8 +123,8 @@ export class ExtendedWorld extends World {
         }, undefined, undefined, undefined, -1);
         this.leadingCar.chassisBody.position.set(-1, 0, 0);
 
-        //Can be removed if debugging is unnecessary.
-        //this.cannonDebugRenderer = CannonDebugger(scene, this);
+        //Uncomment to enable debugging.
+        this.cannonDebugRenderer = CannonDebugger(scene, this);
     }
 
     /**
