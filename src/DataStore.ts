@@ -3,7 +3,7 @@
  */
 
 import Chart from "chart.js/auto";
-import {fitnessData} from "./PopulationManager";
+import {fitnessData} from "./World/PopulationManager";
 
 export class DataStore {
     chart: any;

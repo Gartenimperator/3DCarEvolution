@@ -1,8 +1,8 @@
 /**
  * Manages the Batches and parallel Worlds.
  */
-import {ExtendedWorld, vehicleGenome} from "./ExtendedWorld";
-import {PopulationManager} from "./PopulationManager";
+import {ExtendedWorld, vehicleGenome} from "./World/ExtendedWorld";
+import {PopulationManager} from "./World/PopulationManager";
 import {DataStore} from "./DataStore";
 
 export class WorldManager {

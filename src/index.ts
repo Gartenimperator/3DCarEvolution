@@ -1,16 +1,9 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module';
-import {ExtendedWorld} from "./ExtendedWorld";
+import {ExtendedWorld} from "./World/ExtendedWorld";
 import {WorldManager} from "./WorldManager";
-
-// Detects webgl
-/*
-if ( ! Detector.webgl ) {
-Detector.addGetWebGLMessage();
-document.getElementById( 'container' ).innerHTML = "";
-}
-*/
+import {RainBowColor} from "./Utils/ColorCoder";
 
 let stats: any;
 
@@ -20,7 +13,7 @@ let camera: THREE.PerspectiveCamera, renderer: any;
 
 let scene = new THREE.Scene();
 
-// for more Info why the fakeCamera: https://stackoverflow.com/questions/53292145/forcing-orbitcontrols-to-navigate-around-a-moving-object-almost-working/53298655#53298655
+// for more Info on why the fakeCamera: https://stackoverflow.com/questions/53292145/forcing-orbitcontrols-to-navigate-around-a-moving-object-almost-working/53298655#53298655
 let fakeCamera: THREE.PerspectiveCamera;
 
 let controls: OrbitControls;
@@ -61,7 +54,8 @@ let simpleTrack: number[] = [
  */
 
 let trackGradients: number[] = simpleTrack;
-let trackPieceLengthX = 5;
+let trackPieceLength = 5;
+let trackPieceWidth = 100;
 const textureLoader = new THREE.TextureLoader();
 let trackTexture: THREE.MeshStandardMaterial;
 
@@ -141,7 +135,7 @@ function updateButtons(disableStopBtn: boolean, disableContinueBtn: boolean, dis
 function next() {
     initGraphics();
     currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions, false);
-    currentWorld.initTrackWithGradients(trackGradients, trackPieceLengthX, trackTexture, scene);
+    currentWorld.initTrackWithGradients(trackGradients, trackPieceLength, trackPieceWidth, trackTexture, scene);
     currentWorld.cameraFocus.add(camera);
 }
 
@@ -160,7 +154,7 @@ function resetInputFields() {
     timeoutInput.value = timeOut;
     mutationRateInput.value = mutationRate;
     trackInput.value = trackGradients;
-    trackPieceLengthXInput.value = trackPieceLengthX;
+    trackPieceLengthXInput.value = trackPieceLength;
     variablesInputConfirmation.hidden = true;
     autoRunCheckbox.disabled = false;
 }
@@ -179,10 +173,7 @@ function startSimulation() {
     simulateThisGeneration = true;
     updateButtons(false, true, false, true, false);
 
-    initGraphics();
-    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions, false);
-    currentWorld.initTrackWithGradients(trackGradients, trackPieceLengthX, trackTexture, scene);
-    currentWorld.cameraFocus.add(camera);
+    next();
     resetInputFields();
 }
 
@@ -190,12 +181,9 @@ function restartSimulation() {
     simulateThisGeneration = true;
     updateButtons(false, true, false, true, false);
     worldManager.reset(batchSize, amountOfBatches);
-    resetInputFields();
-    next();
-}
 
-function newPopulation() {
-    restartSimulation();
+    next();
+    resetInputFields();
 }
 
 function stopSimulation() {
@@ -255,8 +243,8 @@ function updateVariables() {
         }
     })
 
-    let newTrackPieceLengthX = parseFloat(trackPieceLengthXInput.value);
-    if (!(newTrackPieceLengthX > 0)) {
+    let newTrackPieceLength = parseFloat(trackPieceLengthXInput.value);
+    if (!(newTrackPieceLength > 0)) {
         canUpdate = false;
         trackPieceLengthXInputError.hidden = false;
     }
@@ -292,7 +280,7 @@ function updateVariables() {
         timeOut = newTimeout;
         mutationRate = newMutationRate;
         trackGradients = newTrackGradients;
-        trackPieceLengthX = newTrackPieceLengthX;
+        trackPieceLength = newTrackPieceLength;
         variablesInputConfirmation.hidden = false;
         hideErrorMsgs();
     }
@@ -302,7 +290,7 @@ fastForwardBtn.addEventListener('click', fastForwardFct);
 nextGenBtn.addEventListener("click", simulateNext);
 stopBtn.addEventListener("click", stopSimulation);
 continueBtn.addEventListener("click", continueSimulation);
-newPopulationBtn.addEventListener("click", newPopulation);
+newPopulationBtn.addEventListener("click", restartSimulation);
 updateVariablesBtn.addEventListener('click', updateVariables);
 
 /**
@@ -311,13 +299,16 @@ updateVariablesBtn.addEventListener('click', updateVariables);
 
 function initGraphics() {
 
+    renderer?.dispose();
+    renderer?.forceContextLoss();
+
     scene = new THREE.Scene();
 
     container = document.getElementById('simulationWindow');
 
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 500);
-    camera.position.x = -40;
-    camera.position.y = 40;
+    camera.position.x = -60;
+    camera.position.y = 60;
     camera.position.z = 0;
     camera.lookAt(new THREE.Vector3(0, 3, 0));
 
@@ -416,7 +407,6 @@ function render() {
         } else if (autoRunCheckbox.checked && simulateThisGeneration) {
             simulateNext();
         }
-        currentWorld.cannonDebugRenderer.update();
         stats.update();
     }
 }
@@ -424,6 +414,13 @@ function render() {
 /**
  * main
  */
+
+for (var i = 0; i <= 100; i++) {
+    let temp = document.createElement('span');
+    temp.innerHTML = '&#9608;';
+    temp.style.color = RainBowColor(i / 10, 10);
+    document.getElementById('color').append(temp);
+}
 
 startSimulation();
 render();
