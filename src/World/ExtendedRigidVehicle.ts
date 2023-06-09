@@ -62,42 +62,21 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             return;
         }
 
-        this.vehicleGen.bodyVectors = this.centerVectorsAround0(this.vehicleGen.bodyVectors);
-
         let vertices = this.toNumberArray(this.vehicleGen.bodyVectors);
 
-        let facesTriangulized: number [][] = qh(vertices, {
+        this.faces = qh(vertices, {
             skipTriangulation: false,
-        });
-
-        //Add visual Body
-        if (scene != undefined) {
-            this.visualBody = this.createThreeMesh(vertices, facesTriangulized);
-            scene.add(this.visualBody);
-        }
-
-        /*let onlyOuterVertices = this.removeUnusedVectorsAndUpdateGen(vertices, facesTriangulized);
-
-        Faces are calculated by the algorithm from https://github.com/mauriciopoppe/quickhull3d
-        let facesNotTriangulized: number [][] = qh(onlyOuterVertices, {
-            skipTriangulation: true,
-        });
-         */
-
-        this.faces = facesTriangulized;
-
-        let temp = new CANNON.ConvexPolyhedron({
-            vertices: this.vehicleGen.bodyVectors,
-            face: this.faces
         });
 
         let tempVol = getVolumeAndCentreOfMass(vertices, this.faces);
 
         console.log(tempVol);
-        console.log(temp.volume());
 
-        this.vehicleMass = temp.volume();
-        this.bodyMass = temp.volume();
+        this.vehicleGen.bodyVectors = this.moveBodyCOMTo0(tempVol[1]);
+        let updatedVertices = this.toNumberArray(this.vehicleGen.bodyVectors);
+
+        this.vehicleMass = tempVol[0] / 5;
+        this.bodyMass = tempVol[0] / 5;
 
         let chassisBody = new CANNON.Body({
             mass: this.bodyMass,
@@ -116,9 +95,13 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             chassisBody.addShape(chassisShapeComplex);
         })
 
-        console.log(chassisBody.shapes[0]);
-
         this.chassisBody = chassisBody;
+
+        //Add visual Body
+        if (scene != undefined) {
+            this.visualBody = this.createThreeMesh(updatedVertices, this.faces);
+            scene.add(this.visualBody);
+        }
     }
 
     /**
@@ -445,21 +428,11 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         return vertices;
     }
 
-    private centerVectorsAround0(vectors: CANNON.Vec3[]) {
-
-        let distanceToCenter = new CANNON.Vec3(0, 0, 0);
-
-        vectors.forEach(bodyVector => {
-            distanceToCenter.x = distanceToCenter.x + bodyVector.x;
-            distanceToCenter.y = distanceToCenter.y + bodyVector.y;
-            distanceToCenter.z = distanceToCenter.z + bodyVector.z;
-        })
-
-        distanceToCenter.scale(1 / vectors.length, distanceToCenter);
+    private moveBodyCOMTo0(com: CANNON.Vec3) {
         let centerBodyVectors: CANNON.Vec3[] = [];
 
         this.vehicleGen.bodyVectors.forEach(vector => {
-            centerBodyVectors.push(vector.vsub(distanceToCenter));
+            centerBodyVectors.push(vector.vsub(com));
         })
         return centerBodyVectors;
     }

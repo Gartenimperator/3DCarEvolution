@@ -3,7 +3,7 @@ import * as CANNON from "cannon-es";
 export function getVolumeAndCentreOfMass(vertices: number[][], faces: number[][]) : [number, CANNON.Vec3] {
     const mult: number[] = [1 / 6, 1 / 24, 1 / 24, 1 / 24, 1 / 60, 1 / 60, 1 / 60, 1 / 120, 1 / 120, 1 / 120];
     let intg: number[] = [0, 0, 0, 0, 0, 0, 0 ,0 ,0, 0];
-    console.log(vertices, faces);
+
     for (let i = 0; i < faces.length; i++) {
         let i0 = faces[i][0];
         let i1 = faces[i][1];
@@ -20,11 +20,6 @@ export function getVolumeAndCentreOfMass(vertices: number[][], faces: number[][]
         let x2 = vertices[i2][0];
         let y2 = vertices[i2][1];
         let z2 = vertices[i2][2];
-
-        console.log(x0, y0, z0);
-        console.log(x1, y1, z1);
-        console.log(x2, y2, z2);
-        console.log('------');
 
         let a1 = x1 - x0;
         let b1 = y1 - y0;
