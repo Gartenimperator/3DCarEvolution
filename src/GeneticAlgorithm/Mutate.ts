@@ -1,6 +1,6 @@
 import {vehicleGenome} from "../World/ExtendedWorld";
-import {createRandomBodyVector, createRandomWheel} from "../VehicleModeling/VehicleGeneration";
-import {vehGenConstants} from "../VehicleModeling/VehicleGenerationConstants";
+import {createRandomBodyVector, createRandomWheel} from "../VehicleModel/VehicleGeneration";
+import {vehGenConstants} from "../VehicleModel/VehicleGenerationConstants";
 
 export function mutate(vehicleGen: vehicleGenome, mutationRate: number): vehicleGenome {
     

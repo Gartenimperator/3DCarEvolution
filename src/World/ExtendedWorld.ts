@@ -6,7 +6,7 @@ import {PopulationManager} from "./PopulationManager";
 import {Groups} from "../Utils/Groups";
 import {Mesh, Object3D} from "three";
 import * as THREE from "three";
-import {createRandomCar} from "../VehicleModeling/VehicleGeneration";
+import {createRandomCar} from "../VehicleModel/VehicleGeneration";
 
 type Track = {
     /**
@@ -334,6 +334,19 @@ export class ExtendedWorld extends World {
      * @param matrix which details the HeightField.
      */
     initTrackWithHeightfield(matrix: number[][]) {
+        // Create a matrix of height values
+        var matrix = [];
+        var sizeX = 15,
+            sizeY = 15;
+        for (var i = 0; i < sizeX; i++) {
+            matrix.push([]);
+            for (var j = 0; j < sizeY; j++) {
+                var height = Math.cos(i/sizeX * Math.PI * 2)*Math.cos(j/sizeY * Math.PI * 2) + 2;
+                if(i===0 || i === sizeX-1 || j===0 || j === sizeY-1)
+                    height = 3;
+                matrix[i].push(height);
+            }
+        }
         const heightfieldShape = new CANNON.Heightfield(matrix, {
             elementSize: 10
         });
@@ -364,14 +377,15 @@ export class ExtendedWorld extends World {
      * @param scene
      */
     initTrackWithGradients(gradients: number[], length: number, width: number, trackTexture: THREE.MeshStandardMaterial, scene) {
-        this.track.trackWidth = width;
+        length = length/2;
+        this.track.trackWidth = width / 2;
 
         let rotateParallelToZAxis: CANNON.Quaternion;
 
         let trackPieceShape = new CANNON.Box(new CANNON.Vec3(length, 0.5, this.track.trackWidth));
         let lowestTrackPoint: number = 0;
 
-        //The Track always starts on a 10m * 50m plane to allow the cars to spawn correctly
+        //The Track always starts on a 10m * width plane to allow the cars to spawn correctly
         let trackStart = new CANNON.Body({
             mass: 0, // mass = 0 makes the body static
             material: this.groundMaterial,
@@ -399,15 +413,14 @@ export class ExtendedWorld extends World {
         //Construct the track by placing the track pieces at the correct positions according to the gradients
         gradients.forEach((gradient) => {
             //Calculate new Position via sum of interior angles, law of sin and law of cos
-            let beta: number = 90 - gradient;
 
             //Law of Sin - calculate the distance (y-distance) to the middle of the to be placed track piece
             let yDist =
-                (Math.sin((gradient * Math.PI) / 180) * length) / Math.sin((90 * Math.PI) / 180);
+                (Math.sin((gradient * Math.PI) / 180)) * length / Math.sin((90 * Math.PI) / 180);
 
             //Law of Cos - calculate the distance (x-distance) to the middle of the to be placed track piece
             let xDist = Math.sqrt(
-                yDist * yDist - 2 * length * yDist * Math.cos((beta * Math.PI) / 180) + length * length
+                 length * length - yDist * yDist
             );
 
             //adjust displacement for larger gradients

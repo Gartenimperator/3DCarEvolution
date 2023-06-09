@@ -44,6 +44,7 @@ let steps: number[] = [
     -90, 0, 0, -90
 ];
 let nowWorking: number[] = [0, 10, 0, 0, 45, -45, -90, 180, -90, 0, 0, 0, 0, -110, -45, 0, -30, -20, 0, 10, 10];
+let example: number[] = [0, 20,90,180,-90,-90,-150,0,0,0];
 let tumble: number[] = [-30, -30, -30, -30, -30, -30, -30, -30, -90, -90, -90, -90, -90, -90, -90, 0, 0, 0, 90, 90, 90, 90, -30, -30, -30, -30];
 let simpleTrack: number[] = [
     0, 15, 10, 0, 10, 0, 10, 0, 30,20,10,0,20,30, 40, 40, 30, 20,-20,0,20,30,40,0,0,10,30,40,50,40,30, -30, -30, -30, -20, -10, 0, 10, 20,30,-90,-90,0,0,0,90,90,0,0,0];
@@ -54,15 +55,15 @@ let simpleTrack: number[] = [
  */
 
 let trackGradients: number[] = simpleTrack;
-let trackPieceLength = 5;
-let trackPieceWidth = 100;
+let trackPieceLength = 10;
+let trackPieceWidth = 200;
 const textureLoader = new THREE.TextureLoader();
 let trackTexture: THREE.MeshStandardMaterial;
 
 //Genetic-Algorithm global variables
 let amountOfWorlds: number = 1;
 
-let batchSize: number = 40;
+let batchSize: number = 1;
 let amountOfBatches: number = 5;
 
 let mutationRate = 0.05;
@@ -306,7 +307,7 @@ function initGraphics() {
 
     container = document.getElementById('simulationWindow');
 
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 500);
+    camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 1, 500);
     camera.position.x = -60;
     camera.position.y = 60;
     camera.position.z = 0;
@@ -315,14 +316,21 @@ function initGraphics() {
     renderer = new THREE.WebGLRenderer({antialias: true});
     renderer.setClearColor(0xbfd1e5);
     renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth * 0.80, window.innerHeight * 0.80);
+    renderer.setSize(window.innerWidth * 0.7, window.innerHeight * 0.7);
 
     let ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
-    let dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    let dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
     dirLight.position.set(20, 20, 5);
     scene.add(dirLight);
+
+    let dirLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+    dirLight2.position.set(20, 20, 60);
+    scene.add(dirLight2);
+    let dirLight3 = new THREE.DirectionalLight(0xffffff, 0.5);
+    dirLight3.position.set(20, -20, 60);
+    scene.add(dirLight3);
 
     materialDynamic = new THREE.MeshPhongMaterial({color: 0xfca400});
     materialStatic = new THREE.MeshPhongMaterial({color: 0x999999});
@@ -330,13 +338,14 @@ function initGraphics() {
     if (container) {
         container.innerHTML = '';
 
-        //See link at the top, as to why I do this
+        //See link at the camera instiiation, as to why I do this
         fakeCamera = camera.clone();
         controls = new OrbitControls(fakeCamera, renderer.domElement);
 
         stats = Stats();
         stats.domElement.style.position = 'absolute';
-        stats.domElement.style.top = '0px';
+        stats.domElement.style.top = '10px';
+        stats.domElement.style.left = '10px';
         container.appendChild(stats.domElement);
 
         container.appendChild(renderer.domElement);

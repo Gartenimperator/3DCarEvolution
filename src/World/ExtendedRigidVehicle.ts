@@ -5,10 +5,9 @@ import {Material, Mesh, Scene} from "three";
 import {Groups} from "../Utils/Groups";
 import {vehicleGenome, wheel} from "./ExtendedWorld";
 import qh, {isPointInsideHull} from 'quickhull3d';
-import {vehGenConstants} from "../VehicleModeling/VehicleGenerationConstants";
-import {ColorConverter} from "three/examples/jsm/math/ColorConverter";
-import setHSV = ColorConverter.setHSV;
+import {vehGenConstants} from "../VehicleModel/VehicleGenerationConstants";
 import {RainBowColor} from "../Utils/ColorCoder";
+import {getVolumeAndCentreOfMass} from "../Utils/ConvexPolyhedronHelperFunctions";
 
 /**
  * Extends the existing CANNON.RigidVehicle class to make interaction between Three and Cannon easier.
@@ -77,24 +76,25 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             scene.add(this.visualBody);
         }
 
-
         /*let onlyOuterVertices = this.removeUnusedVectorsAndUpdateGen(vertices, facesTriangulized);
 
         Faces are calculated by the algorithm from https://github.com/mauriciopoppe/quickhull3d
         let facesNotTriangulized: number [][] = qh(onlyOuterVertices, {
             skipTriangulation: true,
         });
-
          */
 
         this.faces = facesTriangulized;
-
 
         let temp = new CANNON.ConvexPolyhedron({
             vertices: this.vehicleGen.bodyVectors,
             face: this.faces
         });
 
+        let tempVol = getVolumeAndCentreOfMass(vertices, this.faces);
+
+        console.log(tempVol);
+        console.log(temp.volume());
 
         this.vehicleMass = temp.volume();
         this.bodyMass = temp.volume();
@@ -110,11 +110,13 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         //Shape for the physical vehicle body.
         this.faces.forEach(face => {
             let chassisShapeComplex = new CANNON.ConvexPolyhedron({
-                vertices: this.vehicleGen.bodyVectors,
-                faces: [face]
+                vertices: [this.vehicleGen.bodyVectors[face[0]], this.vehicleGen.bodyVectors[face[1]], this.vehicleGen.bodyVectors[face[2]]],
+                faces: [[0, 1, 2]]
             });
             chassisBody.addShape(chassisShapeComplex);
         })
+
+        console.log(chassisBody.shapes[0]);
 
         this.chassisBody = chassisBody;
     }
@@ -156,7 +158,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param vertices
      * @param faces
      */
-    removeUnusedVectorsAndUpdateGen(vertices: number[][], faces: number[][]): number[][] {
+    removeUnusedVectors(vertices: number[][], faces: number[][]): number[][] {
 
         let isInsideTheShape: boolean [] = new Array(vertices.length).fill(true);
 
@@ -167,16 +169,13 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         })
 
         let convertedVertices: number[][] = [];
-        let outerBodyVectors: CANNON.Vec3[] = [];
 
         isInsideTheShape.forEach((isInside, i) => {
             if (!isInside) {
                 convertedVertices.push(vertices[i]);
-                outerBodyVectors.push(this.vehicleGen.bodyVectors[i]);
             }
         })
 
-        //this.vehicleGen.bodyVectors = outerBodyVectors;
         return convertedVertices;
     }
 
@@ -412,31 +411,21 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             } else {
                 this.setSteeringValue(0, i);
             }
-            let wheelForce = 0;
 
-            if (this.wheelBodies[i].angularVelocity.length() < 10) {
+            let maxSpeed = 60;
+            let wheelForce = Math.min(11000, -this.wheelBodies[i].mass * 0.7 * (this.wheelBodies[i].angularVelocity.length() - maxSpeed));
 
-                wheelForce = 1000 + this.wheelBodies[i].mass * 20;
-                /*
-                console.log(wheelForce);
-                console.log(this.bodyMass / 3);
-                console.log(this.wheelBodies[i].mass);
-                console.log('---');
-                */
-
-
-            } else if (this.wheelBodies[i].angularVelocity.length() < 15) {
-                wheelForce = 500 + this.wheelBodies[i].mass * 15;
-            }
-
+            /*
             if (this.bodyMass < this.wheelBodies[i].mass / 2) {
-
                 wheelForce = wheelForce * 0.5;
             }
+             */
 
-            if (this.wheelBodies[i].mass < 10) {
-                wheelForce = wheelForce * this.wheelBodies[i].mass / 10;
+            if (this.wheelBodies[i].mass < 20) {
+                wheelForce = wheelForce * 0.9;
             }
+
+            wheelForce = wheel.canSteer ? wheelForce * 0.7 : wheelForce;
 
             this.applyWheelForce(wheelForce, i);
         });

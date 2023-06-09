@@ -4,6 +4,7 @@
 
 import Chart from "chart.js/auto";
 import {fitnessData} from "./World/PopulationManager";
+import {roundToFour} from "./VehicleModel/VehicleGeneration";
 
 export class DataStore {
     chart: any;
@@ -88,7 +89,7 @@ export class DataStore {
 
     newChart() {
         this.chart = new Chart(
-            document.getElementById('acquisitions'),
+            document.getElementById('fitnessChart'),
             {
                 type: 'line',
                 options: {
@@ -103,6 +104,12 @@ export class DataStore {
                         },
                         tooltip: {
                             enabled: true,
+                            titleFont: {
+                                size: 17
+                            },
+                            bodyFont: {
+                                size: 16
+                            },
                             callbacks: {
                                 title: function (context) {
                                     if (context[0].datasetIndex === 0) {
@@ -115,7 +122,16 @@ export class DataStore {
                                     }
                                 },
                                 afterLabel: function (context) {
-                                    return 'test';
+                                    let data = context.dataset.data[0].fitnessData;
+                                    let string = `Distance traveled: ${roundToFour(data.distanceTraveled)} meters.`;
+                                    if (data.hasFinished) {
+                                        string += `\nFinished in ${roundToFour(data.timeInSteps / 60)} seconds :).`;
+                                    } else {
+                                        string += `\nDied after ${roundToFour(data.timeInSteps / 60)} seconds :(.`;
+                                    }
+                                    string += `\nAverage speed: ${roundToFour(data.distanceTraveled / (data.timeInSteps / 60))} meters per second.`
+                                    string += `\n   (${roundToFour((data.distanceTraveled / (data.timeInSteps / 60)) / 3.6)} kilometers per hour)`
+                                    return string;
                                 }
                             }
                         }
