@@ -8,6 +8,7 @@ import qh, {isPointInsideHull} from 'quickhull3d';
 import {vehGenConstants} from "../VehicleModel/VehicleGenerationConstants";
 import {RainBowColor} from "../Utils/ColorCoder";
 import {getVolumeAndCentreOfMass} from "../Utils/ConvexPolyhedronHelperFunctions";
+import {toNumberArray} from "../Utils/VehicleGenArrayHelper";
 
 /**
  * Extends the existing CANNON.RigidVehicle class to make interaction between Three and Cannon easier.
@@ -34,6 +35,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     vehicleGen: vehicleGenome;
     faces: number[][];
     hasFinished: boolean = false;
+    private centeredBodyVectors: CANNON.Vec3[] = [];
     private activeWheels: wheel[] = [];
 
     constructor(
@@ -62,7 +64,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             return;
         }
 
-        let vertices = this.toNumberArray(this.vehicleGen.bodyVectors);
+        let vertices = toNumberArray(this.vehicleGen.bodyVectors);
 
         this.faces = qh(vertices, {
             skipTriangulation: false,
@@ -72,11 +74,11 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         console.log(tempVol);
 
-        this.vehicleGen.bodyVectors = this.moveBodyCOMTo0(tempVol[1]);
-        let updatedVertices = this.toNumberArray(this.vehicleGen.bodyVectors);
+        this.centeredBodyVectors = this.moveBodyCOMTo0(this.vehicleGen.bodyVectors, tempVol[1]);
+        let updatedVertices = toNumberArray(this.centeredBodyVectors);
 
-        this.vehicleMass = tempVol[0] / 5;
-        this.bodyMass = tempVol[0] / 5;
+        this.vehicleMass = tempVol[0];
+        this.bodyMass = tempVol[0];
 
         let chassisBody = new CANNON.Body({
             mass: this.bodyMass,
@@ -89,7 +91,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         //Shape for the physical vehicle body.
         this.faces.forEach(face => {
             let chassisShapeComplex = new CANNON.ConvexPolyhedron({
-                vertices: [this.vehicleGen.bodyVectors[face[0]], this.vehicleGen.bodyVectors[face[1]], this.vehicleGen.bodyVectors[face[2]]],
+                vertices: [this.centeredBodyVectors[face[0]], this.centeredBodyVectors[face[1]], this.centeredBodyVectors[face[2]]],
                 faces: [[0, 1, 2]]
             });
             chassisBody.addShape(chassisShapeComplex);
@@ -114,7 +116,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         //Add wheels to the car.
         for (let i = 0; i < this.vehicleGen.wheels.length; i++) {
 
-            let laysInsideShape = isPointInsideHull([this.vehicleGen.wheels[i].posX, this.vehicleGen.wheels[i].posY, this.vehicleGen.wheels[i].posZ], this.toNumberArray(this.vehicleGen.bodyVectors), this.faces);
+            let laysInsideShape = isPointInsideHull([this.vehicleGen.wheels[i].posX, this.vehicleGen.wheels[i].posY, this.vehicleGen.wheels[i].posZ], toNumberArray(this.centeredBodyVectors), this.faces);
 
             if (physicalWheelMaterial != undefined && laysInsideShape) {
 
@@ -134,32 +136,6 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                 this.activeWheels.push(this.vehicleGen.wheels[i]);
             }
         }
-    }
-
-    /**
-     *
-     * @param vertices
-     * @param faces
-     */
-    removeUnusedVectors(vertices: number[][], faces: number[][]): number[][] {
-
-        let isInsideTheShape: boolean [] = new Array(vertices.length).fill(true);
-
-        faces.forEach(face => {
-            isInsideTheShape[face[0]] = false;
-            isInsideTheShape[face[1]] = false;
-            isInsideTheShape[face[2]] = false;
-        })
-
-        let convertedVertices: number[][] = [];
-
-        isInsideTheShape.forEach((isInside, i) => {
-            if (!isInside) {
-                convertedVertices.push(vertices[i]);
-            }
-        })
-
-        return convertedVertices;
     }
 
     /**
@@ -414,24 +390,9 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         });
     }
 
-    private toNumberArray(bodyVectors: CANNON.Vec3[]) {
-        let vertices: number[][] = [];
-
-        //Convert the CANNON.Vec3 vectors to a number [[]] array with the same order.
-        bodyVectors.forEach(bodyVector => {
-            let vector: number[] = [];
-            vector.push(bodyVector.x);
-            vector.push(bodyVector.y);
-            vector.push(bodyVector.z);
-            vertices.push(vector);
-        })
-        return vertices;
-    }
-
-    private moveBodyCOMTo0(com: CANNON.Vec3) {
+    private moveBodyCOMTo0(bodyVector: CANNON.Vec3[], com: CANNON.Vec3) {
         let centerBodyVectors: CANNON.Vec3[] = [];
-
-        this.vehicleGen.bodyVectors.forEach(vector => {
+        bodyVector.forEach(vector => {
             centerBodyVectors.push(vector.vsub(com));
         })
         return centerBodyVectors;

@@ -64,3 +64,17 @@ export function toGenome(vehicleGen: number[], amountOfBodyVectors: number): veh
         wheels: wheels
     };
 }
+
+export function toNumberArray(bodyVectors: CANNON.Vec3[]) {
+    let vertices: number[][] = [];
+
+    //Convert the CANNON.Vec3 vectors to a number [[]] array with the same order.
+    bodyVectors.forEach(bodyVector => {
+        let vector: number[] = [];
+        vector.push(bodyVector.x);
+        vector.push(bodyVector.y);
+        vector.push(bodyVector.z);
+        vertices.push(vector);
+    })
+    return vertices;
+}
