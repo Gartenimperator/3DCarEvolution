@@ -382,14 +382,14 @@ export class ExtendedWorld extends World {
 
         let rotateParallelToZAxis: CANNON.Quaternion;
 
-        let trackPieceShape = new CANNON.Box(new CANNON.Vec3(length, 0.5, this.track.trackWidth));
+        let trackPieceShape = new CANNON.Box(new CANNON.Vec3(length, 0.1, this.track.trackWidth));
         let lowestTrackPoint: number = 0;
 
         //The Track always starts on a 10m * width plane to allow the cars to spawn correctly
         let trackStart = new CANNON.Body({
             mass: 0, // mass = 0 makes the body static
             material: this.groundMaterial,
-            shape: new CANNON.Box(new CANNON.Vec3(10, 0.5, this.track.trackWidth)),
+            shape: new CANNON.Box(new CANNON.Vec3(10, 0.1, this.track.trackWidth)),
             collisionFilterGroup: Groups.GROUP2,
             collisionFilterMask: Groups.GROUP1
         });
@@ -398,7 +398,7 @@ export class ExtendedWorld extends World {
         this.track.trackPieces.push(trackStart);
 
         if (this.render) {
-            let geometry = new THREE.BoxGeometry(10 * 2, 1, this.track.trackWidth * 2); // double chasis shape
+            let geometry = new THREE.BoxGeometry(10 * 2, 0.2, this.track.trackWidth * 2); // double chasis shape
             let trackStartVisual = new THREE.Mesh(geometry, trackTexture);
 
             this.copyPosition(trackStart, trackStartVisual);
@@ -461,7 +461,7 @@ export class ExtendedWorld extends World {
             //Add visual Body
             if (this.render) {
 
-                let geometry = new THREE.BoxGeometry(length * 2, 1, this.track.trackWidth * 2); // double chasis shape
+                let geometry = new THREE.BoxGeometry(length * 2, 0.2, this.track.trackWidth * 2); // double chasis shape
                 let trackVisual = new THREE.Mesh(geometry, trackTexture);
 
                 const posBody = trackPiece.position;
@@ -510,7 +510,6 @@ export class ExtendedWorld extends World {
 
             this.removeObjectFromScene(vehicle.visualBody);
             this.removeObjectFromScene(vehicle.wheelMaterial);
-            this.removeObjectFromScene(vehicle.wheelHoodMaterial);
             this.removeObjectFromScene(vehicle.bodyMaterial);
         })
         this.populationManager.activeCars.clear();

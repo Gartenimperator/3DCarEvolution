@@ -9,10 +9,8 @@ export function createNextGeneration(mutationRate: number, fitnessData: fitnessD
     let populationSize = fitnessData.length;
 
     let selection = oneRoundTournamentSelection(fitnessData);
-    console.log(selection);
 
     for (let i = 0; i < populationSize / 2; i++) {
-        console.log(Math.floor(Math.random() * populationSize));
         let parent1 = selection[Math.floor(Math.random() * populationSize)];
         let parent2 = selection[Math.floor(Math.random() * populationSize)];
 

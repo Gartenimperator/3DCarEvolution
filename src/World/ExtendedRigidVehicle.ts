@@ -25,7 +25,6 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     wheelMaterial = new THREE.MeshLambertMaterial({
         color: 0x191919
     });
-    wheelHoodMaterial = new THREE.MeshLambertMaterial();
     bodyMaterial = new THREE.MeshBasicMaterial({
         color: 0xC4151C
     });
@@ -72,8 +71,6 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         let tempVol = getVolumeAndCentreOfMass(vertices, this.faces);
 
-        console.log(tempVol);
-
         this.centeredBodyVectors = this.moveBodyCOMTo0(this.vehicleGen.bodyVectors, tempVol[1]);
         let updatedVertices = toNumberArray(this.centeredBodyVectors);
 
@@ -115,10 +112,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     private addWheels(physicalWheelMaterial: CANNON.Material | undefined, scene: THREE.Scene | undefined) {
         //Add wheels to the car.
         for (let i = 0; i < this.vehicleGen.wheels.length; i++) {
-
-            let laysInsideShape = isPointInsideHull([this.vehicleGen.wheels[i].posX, this.vehicleGen.wheels[i].posY, this.vehicleGen.wheels[i].posZ], toNumberArray(this.centeredBodyVectors), this.faces);
-
-            if (physicalWheelMaterial != undefined && laysInsideShape) {
+            if (physicalWheelMaterial != undefined) {
 
                 this.addWheelWithMesh(
                     this.vehicleGen.wheels[i].radius,
@@ -197,7 +191,8 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                              physicalWheelMaterial: CANNON.Material,
                              canSteer: boolean) {
         const wheelVolume = Math.PI * width * (radius * radius);
-        let wheelMass = Math.max(5, wheelVolume * density);
+
+        let wheelMass = wheelVolume * density * 10;
 
         let wheelBody = new CANNON.Body({
             mass: wheelMass,
@@ -243,12 +238,13 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         wheelHood.rotateY(Math.PI / 2);
 
         //https://stackoverflow.com/questions/14181631/changing-color-of-cube-in-three-js
-        this.wheelHoodMaterial.color = new THREE.Color(RainBowColor(density, vehGenConstants.maxDensity));
+        let wheelHoodMaterial = new THREE.MeshLambertMaterial();
+        wheelHoodMaterial.color = new THREE.Color(RainBowColor(density, vehGenConstants.maxDensityDiff));
 
         let wheelMesh = new THREE.Mesh(wheelVisual, this.wheelMaterial);
-        wheelMesh.add(new THREE.Mesh(wheelHood, this.wheelHoodMaterial));
+        wheelMesh.add(new THREE.Mesh(wheelHood, wheelHoodMaterial));
         wheelMesh.add(new THREE.Mesh(new THREE.BoxGeometry(radius * 0.6, radius * 0.2, width + 0.15), this.wheelMaterial));
-        wheelMesh.add(new THREE.Mesh(new THREE.BoxGeometry(radius * 2, radius * 0.2, width - 0.05), this.wheelHoodMaterial));
+        wheelMesh.add(new THREE.Mesh(new THREE.BoxGeometry(radius * 2, radius * 0.2, width - 0.05), wheelHoodMaterial));
         scene.add(wheelMesh);
         this.wheelMeshes.push(wheelMesh);
     }
@@ -371,17 +367,21 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                 this.setSteeringValue(0, i);
             }
 
-            let maxSpeed = 60;
-            let wheelForce = Math.min(11000, -this.wheelBodies[i].mass * 0.7 * (this.wheelBodies[i].angularVelocity.length() - maxSpeed));
-
+            let maxSpeed = 25;
+            let wheelForce = 0;
+            if (this.wheelBodies[i].angularVelocity.length() > maxSpeed) {
+             wheelForce = this.wheelBodies[i].mass * (1 - this.wheelBodies[i].mass / this.vehicleMass) * (- this.wheelBodies[i].angularVelocity.length() - 10);
+            } else {
+                wheelForce = this.wheelBodies[i].mass * (1 - this.wheelBodies[i].mass / this.vehicleMass) * (- this.wheelBodies[i].angularVelocity.length() + maxSpeed + 20);
+            }
             /*
             if (this.bodyMass < this.wheelBodies[i].mass / 2) {
                 wheelForce = wheelForce * 0.5;
             }
              */
 
-            if (this.wheelBodies[i].mass < 20) {
-                wheelForce = wheelForce * 0.9;
+            if (this.wheelBodies[i].mass < 15) {
+                wheelForce = wheelForce * 0.7;
             }
 
             wheelForce = wheel.canSteer ? wheelForce * 0.7 : wheelForce;

@@ -28,7 +28,7 @@ export function mutate(vehicleGen: vehicleGenome, mutationRate: number): vehicle
             wheel.radius = Math.max(vehGenConstants.minimalRadius, wheel.radius + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutationValue / 2);
         }
         if (mutate()) {
-            wheel.density = Math.min(vehGenConstants.maxDensity, Math.max(vehGenConstants.minDensity, wheel.density + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutationValue / 0.5));
+            wheel.density = Math.min(vehGenConstants.minDensity + vehGenConstants.maxDensityDiff, Math.max(vehGenConstants.minDensity, wheel.density + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutationValue / 0.5));
         }
         if (mutate()) {
             wheel.width = Math.max(vehGenConstants.minimalWidth, wheel.width + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutationValue / 2);

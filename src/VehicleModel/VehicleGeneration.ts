@@ -33,8 +33,8 @@ export function createRandomCar(): vehicleGenome {
 
 export function createRandomWheel(): wheel {
     return {
-        radius: (roundToFour(vehGenConstants.minimalRadius + Math.random() * vehGenConstants.maximalRadius)), //wheel radius [0.5, 4)
-        width: (roundToFour(vehGenConstants.minimalWidth + Math.random() * vehGenConstants.maximalWidth)), //wheel width [0.5, 4)
+        radius: (roundToFour(vehGenConstants.minimalRadius + Math.random() * vehGenConstants.maximalRadius)),
+        width: (roundToFour(vehGenConstants.minimalWidth + Math.random() * vehGenConstants.maximalWidth)),
 
         //Try to generate wheels which are touching the car
         posX: roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * vehGenConstants.maxWheelPosition), //wheel position lengthwise
@@ -42,7 +42,7 @@ export function createRandomWheel(): wheel {
         posZ: roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * vehGenConstants.maxWheelPosition), //wheel position width
 
         stiffness: Math.random(),
-        density: Math.random() * vehGenConstants.maxDensity + vehGenConstants.minDensity, //density [0.5, 3)
+        density: Math.random() * vehGenConstants.maxDensityDiff + vehGenConstants.minDensity,
         canSteer: Math.floor(Math.random() * 2) === 1,
     };
 }

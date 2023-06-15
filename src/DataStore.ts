@@ -122,7 +122,8 @@ export class DataStore {
                                     }
                                 },
                                 afterLabel: function (context) {
-                                    let data = context.dataset.data[0].fitnessData;
+                                    console.log(context);
+                                    let data = context.dataset.data[context.dataIndex].fitnessData;
                                     let string = `Distance traveled: ${roundToFour(data.distanceTraveled)} meters.`;
                                     if (data.hasFinished) {
                                         string += `\nFinished in ${roundToFour(data.timeInSteps / 60)} seconds :).`;

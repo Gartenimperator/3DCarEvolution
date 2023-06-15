@@ -55,7 +55,7 @@ let simpleTrack: number[] = [
  */
 
 let trackGradients: number[] = simpleTrack;
-let trackPieceLength = 10;
+let trackPieceLength = 5;
 let trackPieceWidth = 200;
 const textureLoader = new THREE.TextureLoader();
 let trackTexture: THREE.MeshStandardMaterial;
@@ -135,7 +135,7 @@ function updateButtons(disableStopBtn: boolean, disableContinueBtn: boolean, dis
 
 function next() {
     initGraphics();
-    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions, false);
+    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions, false,batchSize, amountOfBatches);
     currentWorld.initTrackWithGradients(trackGradients, trackPieceLength, trackPieceWidth, trackTexture, scene);
     currentWorld.cameraFocus.add(camera);
 }
@@ -196,6 +196,21 @@ function stopSimulation() {
 function continueSimulation() {
     simulateThisGeneration = true;
     updateButtons(false, true, false, true, false);
+}
+
+function simulateNext() {
+    next();
+
+    //Only fastForward after the current Generation has finished.
+    if (fastForwardCounter > 0) {
+        fastForward = true;
+        updateInfoText();
+    } else {
+        fastForward = false;
+        simulateThisGeneration = true;
+        updateButtons(false, true, false, true, false);
+        resetInputFields();
+    }
 }
 
 // custom round function
@@ -307,9 +322,9 @@ function initGraphics() {
 
     container = document.getElementById('simulationWindow');
 
-    camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 1, 500);
-    camera.position.x = -60;
-    camera.position.y = 60;
+    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 500);
+    camera.position.x = -30;
+    camera.position.y = 40;
     camera.position.z = 0;
     camera.lookAt(new THREE.Vector3(0, 3, 0));
 
@@ -360,21 +375,6 @@ function initGraphics() {
             map: trackAsphaltTexture
         }
     )
-}
-
-function simulateNext() {
-    next();
-
-    //Only fastForward after the current Generation has finished.
-    if (fastForwardCounter > 0) {
-        fastForward = true;
-        updateInfoText();
-    } else {
-        fastForward = false;
-        simulateThisGeneration = true;
-        updateButtons(false, true, false, true, false);
-        resetInputFields();
-    }
 }
 
 /**

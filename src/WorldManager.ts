@@ -11,8 +11,13 @@ export class WorldManager {
     currentGen: number = 1;
     worldIdCounter: number = 0;
     worldAmount: number;
+
     batchSize: number;
     batchAmount: number;
+
+    lastBatchSize: number;
+    lastBatchAmount: number;
+
     currentBatch: number = -1;
     worldCounter: number = 1;
     currentWorld: ExtendedWorld;
@@ -34,7 +39,9 @@ export class WorldManager {
          worldOptions,
          gravity,
          groundBodyContactMaterialOptions,
-         fastForward
+         fastForward,
+         batchSize,
+         amountOfBatches
     ) {
         this.currentWorld?.cleanUpCurrentGeneration(true);
 
@@ -43,6 +50,10 @@ export class WorldManager {
         } else {
             this.dataStore.pushData(this.currentPopulationManager.fitnessData, this.currentGen);
             this.populationStore.set(this.worldCounter, this.currentPopulationManager.createNextGeneration(0.05));
+            this.lastBatchSize = this.batchSize;
+            this.lastBatchAmount = this.batchAmount;
+            this.batchSize = batchSize;
+            this.batchAmount = amountOfBatches - 1;
             this.currentPopulationManager = new PopulationManager(this.batchSize * (1 + this.batchAmount), this.batchSize);
 
             this.currentBatch = 0;
@@ -54,7 +65,7 @@ export class WorldManager {
             }
         }
 
-        let population = this.populationStore.get(this.worldCounter)?.slice(this.batchSize * this.currentBatch, this.batchSize * this.currentBatch + this.batchSize);
+        let population = this.populationStore.get(this.worldCounter)?.slice(this.lastBatchSize * this.currentBatch, this.lastBatchSize * this.currentBatch + this.lastBatchSize);
 
         this.currentWorld = new ExtendedWorld(
             fastForward ? undefined : scene,
