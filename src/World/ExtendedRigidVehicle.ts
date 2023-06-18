@@ -21,6 +21,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     timeOut: number = 0;
     bodyMass: number = 0;
     vehicleMass: number = 0;
+    wheelMass: number = 0;
     id: number;
     wheelMaterial = new THREE.MeshLambertMaterial({
         color: 0x191919
@@ -74,8 +75,8 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         this.centeredBodyVectors = this.moveBodyCOMTo0(this.vehicleGen.bodyVectors, tempVol[1]);
         let updatedVertices = toNumberArray(this.centeredBodyVectors);
 
-        this.vehicleMass = tempVol[0];
-        this.bodyMass = tempVol[0];
+        this.vehicleMass += tempVol[0] * 10;
+        this.bodyMass = tempVol[0] * 10;
 
         let chassisBody = new CANNON.Body({
             mass: this.bodyMass,
@@ -208,15 +209,18 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         wheelBody.addShape(shape, new CANNON.Vec3(), rotateParallelToXAxis);
         wheelBody.angularDamping = 0.7;
 
+        //TODO Calc correct wheel pos here
+
         this.addWheel({
             body: wheelBody,
-            position: new CANNON.Vec3(positionX, positionY, positionY),
+            position: new CANNON.Vec3(positionX, positionY, positionZ),
             axis: new CANNON.Vec3(0, 0, -1)
         });
 
-        this.constraints[this.wheelBodies.length - 1].equations[1].setSpookParams(Math.max(4000, 20000 * stiffness + wheelMass), 6, 1 / 60);
+        this.constraints[this.wheelBodies.length - 1].equations[1].setSpookParams(Math.max(4000, 10000 + 60000 * stiffness + wheelMass), 6, 1 / 60);
 
         this.vehicleMass = this.vehicleMass + wheelMass;
+        this.wheelMass = this.wheelMass + wheelMass;
     }
 
     /**
@@ -356,7 +360,8 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * Update the steering angle of each wheel.
      * @param trackWidth width of the track the vehicle is currently driving on.
      */
-    updateSteeringAndApplyPower(trackWidth: number) {
+    updateSteeringAndApplyPower(trackWidth: number): boolean {
+        let carIsFine = true;
         this.activeWheels.forEach((wheel, i) => {
             let positionZ = this.chassisBody.position.z;
 
@@ -367,27 +372,32 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                 this.setSteeringValue(0, i);
             }
 
-            let maxSpeed = 25;
-            let wheelForce = 0;
-            if (this.wheelBodies[i].angularVelocity.length() > maxSpeed) {
-             wheelForce = this.wheelBodies[i].mass * (1 - this.wheelBodies[i].mass / this.vehicleMass) * (- this.wheelBodies[i].angularVelocity.length() - 10);
-            } else {
-                wheelForce = this.wheelBodies[i].mass * (1 - this.wheelBodies[i].mass / this.vehicleMass) * (- this.wheelBodies[i].angularVelocity.length() + maxSpeed + 20);
-            }
-            /*
-            if (this.bodyMass < this.wheelBodies[i].mass / 2) {
-                wheelForce = wheelForce * 0.5;
-            }
-             */
+            let currentSpeed = this.wheelBodies[i].angularVelocity.length();
+            let wheelMass = this.wheelBodies[i].mass;
 
-            if (this.wheelBodies[i].mass < 15) {
+            let maxSpeed = 25;
+            let wheelForce;
+
+            if (currentSpeed > maxSpeed) {
+                wheelForce = wheelMass  * (- currentSpeed - 10);
+            } else {
+                wheelForce = this.bodyMass / (1 + (200 / wheelMass) + currentSpeed * currentSpeed) + wheelMass  * (-currentSpeed + maxSpeed + 25);
+            }
+
+            if (wheelMass < 15) {
                 wheelForce = wheelForce * 0.7;
             }
 
             wheelForce = wheel.canSteer ? wheelForce * 0.7 : wheelForce;
 
-            this.applyWheelForce(wheelForce, i);
+            if (isNaN(wheelForce)) {
+                console.log(this);
+                carIsFine = false;
+            } else {
+                this.applyWheelForce(wheelForce, i);
+            }
         });
+        return carIsFine;
     }
 
     private moveBodyCOMTo0(bodyVector: CANNON.Vec3[], com: CANNON.Vec3) {

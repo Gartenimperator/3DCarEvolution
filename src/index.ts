@@ -1,7 +1,8 @@
 import * as THREE from 'three';
+import * as CANNON from 'cannon-es';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module';
-import {ExtendedWorld} from "./World/ExtendedWorld";
+import {ExtendedWorld, vehicleGenome, wheel} from "./World/ExtendedWorld";
 import {WorldManager} from "./WorldManager";
 import {RainBowColor} from "./Utils/ColorCoder";
 
@@ -43,6 +44,7 @@ let steps: number[] = [
     0, -90, -90, -90, -90, 0, 0, -90, -90, -90, -90, 0, 0, -90, -90, -90, -90, 0, 0, -90, -90, -90,
     -90, 0, 0, -90
 ];
+
 let nowWorking: number[] = [0, 10, 0, 0, 45, -45, -90, 180, -90, 0, 0, 0, 0, -110, -45, 0, -30, -20, 0, 10, 10];
 let example: number[] = [0, 20,90,180,-90,-90,-150,0,0,0];
 let tumble: number[] = [-30, -30, -30, -30, -30, -30, -30, -30, -90, -90, -90, -90, -90, -90, -90, 0, 0, 0, 90, 90, 90, 90, -30, -30, -30, -30];
@@ -81,15 +83,13 @@ let isPaused = false;
 let fastForwardCounter: number = 0;
 let fastForward: boolean = false;
 
+let userVehicle: vehicleGenome | undefined;
+
 /**
  * WorldManager
  */
 
 let worldManager: WorldManager = new WorldManager(amountOfWorlds, batchSize, amountOfBatches);
-
-/**
- * Utils Function
- */
 
 //TODO Use bootstrap for inputs?
 
@@ -117,6 +117,9 @@ let trackInputError = document.getElementById('trackGradientsInputError');
 let trackPieceLengthXInput = document.getElementById('trackPieceLengthX');
 let trackPieceLengthXInputError = document.getElementById('trackPieceLengthXInputError');
 let variablesInputConfirmation = document.getElementById('variablesInputConfirmation');
+let vehicleInput = document.getElementById('vehicleInput');
+let vehicleInputBtn = document.getElementById('addVehicleBtn');
+let vehicleInputError = document.getElementById('vehicleInputError');
 
 
 let infoText = document.getElementById('currentBatchInfo');
@@ -135,7 +138,8 @@ function updateButtons(disableStopBtn: boolean, disableContinueBtn: boolean, dis
 
 function next() {
     initGraphics();
-    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions, false,batchSize, amountOfBatches);
+    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions, false, batchSize, amountOfBatches, userVehicle);
+    userVehicle = undefined;
     currentWorld.initTrackWithGradients(trackGradients, trackPieceLength, trackPieceWidth, trackTexture, scene);
     currentWorld.cameraFocus.add(camera);
 }
@@ -229,6 +233,70 @@ function fastForwardFct() {
     }
 }
 
+function inputVehicle() {
+    let newGen: vehicleGenome = {
+        bodyVectors: [],
+        wheels: []
+    };
+    let input: String[] = vehicleInput.value.split('|');
+    if (input.length === 2) {
+        let bodyVectors = input[0].split(',');
+        let wheelVectors = input[1].split(',');
+
+        if (bodyVectors.length % 3 === 0 && bodyVectors.length >= 12) {
+            for (let i = 0; i < bodyVectors.length; i += 3) {
+                let x = parseFloat(bodyVectors[i]);
+                let y = parseFloat(bodyVectors[i + 1]);
+                let z = parseFloat(bodyVectors[i + 2]);
+
+                if (-10 < x && 10 > x && -10 < y && 10 > y && -10 < z && 10 > z) {
+                    newGen.bodyVectors.push(new CANNON.Vec3(x,y,z));
+                } else {
+                    vehicleInputError.hidden = false;
+                    return;
+                }
+            }
+        } else {
+            vehicleInputError.hidden = false;
+            return;
+        }
+
+        if (wheelVectors.length % 8 === 0 && wheelVectors.length >= 8) {
+            for (let i = 0; i < wheelVectors.length; i += 8) {
+                let wheelGen: wheel;
+                try {
+                    wheelGen = {
+                        radius:parseFloat(wheelVectors[i]),
+                        width:parseFloat(wheelVectors[i + 1]),
+                        density:parseFloat(wheelVectors[i + 2]),
+                        stiffness:parseFloat(wheelVectors[i + 3]),
+                        posX:parseFloat(wheelVectors[i + 4]),
+                        posY:parseFloat(wheelVectors[i + 5]),
+                        posZ:parseFloat(wheelVectors[i + 6]),
+                        canSteer:parseInt(wheelVectors[i + 7]) === 1,
+                    };
+                } catch (e) {
+                    console.log('Error');
+                    vehicleInputError.hidden = false;
+                    return;
+                } finally {
+                    newGen.wheels.push(wheelGen);
+                }
+            }
+        } else {
+            if (!(wheelVectors[0] == '')) {
+                vehicleInputError.hidden = false;
+                return;
+            }
+        }
+        vehicleInputError.hidden = true;
+        userVehicle = newGen;
+    } else {
+        vehicleInputError.hidden = false;
+        return;
+    }
+}
+
 function updateVariables() {
     let canUpdate = true;
 
@@ -308,6 +376,7 @@ stopBtn.addEventListener("click", stopSimulation);
 continueBtn.addEventListener("click", continueSimulation);
 newPopulationBtn.addEventListener("click", restartSimulation);
 updateVariablesBtn.addEventListener('click', updateVariables);
+vehicleInputBtn.addEventListener('click', inputVehicle);
 
 /**
  * Init Functions

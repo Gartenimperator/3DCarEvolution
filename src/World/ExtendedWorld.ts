@@ -213,7 +213,11 @@ export class ExtendedWorld extends World {
             //Update position of cars inside the scene.
             this.populationManager.activeCars.forEach((car) => {
                 this.advanceTimeout(car, timeOut);
-                car.updateSteeringAndApplyPower(this.track.trackWidth);
+                if (!car.updateSteeringAndApplyPower(this.track.trackWidth)) {
+                    //takes care of cars that bug out
+                    car.furthestPosition = new CANNON.Vec3(0,0,0);
+                    this.removeVehicle(car);
+                }
                 this.updateScene(car);
             });
 
@@ -226,7 +230,11 @@ export class ExtendedWorld extends World {
             //Update only the cars physical body.
             this.populationManager.activeCars.forEach((car) => {
                 this.advanceTimeout(car, timeOut);
-                car.updateSteeringAndApplyPower(this.track.trackWidth);
+                if (!car.updateSteeringAndApplyPower(this.track.trackWidth)) {
+                    //takes care of cars that bug out
+                    car.furthestPosition = new CANNON.Vec3(0,0,0);
+                    this.removeVehicle(car);
+                }
             });
 
             if (this.populationManager.activeCars.size === 0) {
@@ -327,42 +335,6 @@ export class ExtendedWorld extends World {
         this.addContactMaterial(wheelGroundContactMaterialMediumFriction);
         this.addContactMaterial(wheelGroundContactMaterialHighFriction);
         this.addContactMaterial(bodyGroundContactMaterial);
-    }
-
-    /**
-     * Creates a HeightField track with the given matrix. This approach causes the world to be very slow.
-     * @param matrix which details the HeightField.
-     */
-    initTrackWithHeightfield(matrix: number[][]) {
-        // Create a matrix of height values
-        var matrix = [];
-        var sizeX = 15,
-            sizeY = 15;
-        for (var i = 0; i < sizeX; i++) {
-            matrix.push([]);
-            for (var j = 0; j < sizeY; j++) {
-                var height = Math.cos(i/sizeX * Math.PI * 2)*Math.cos(j/sizeY * Math.PI * 2) + 2;
-                if(i===0 || i === sizeX-1 || j===0 || j === sizeY-1)
-                    height = 3;
-                matrix[i].push(height);
-            }
-        }
-        const heightfieldShape = new CANNON.Heightfield(matrix, {
-            elementSize: 10
-        });
-        const heightfieldBody = new CANNON.Body({
-            mass: 0,
-            collisionFilterGroup: 2,
-            collisionFilterMask: 1
-        });
-        heightfieldBody.addShape(heightfieldShape);
-        heightfieldBody.position.set(
-            -5,
-            -2,
-            ((matrix[0].length - 1) * heightfieldShape.elementSize) / 2
-        );
-        heightfieldBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
-        this.addBody(heightfieldBody);
     }
 
     /**

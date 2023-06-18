@@ -41,7 +41,8 @@ export class WorldManager {
          groundBodyContactMaterialOptions,
          fastForward,
          batchSize,
-         amountOfBatches
+         amountOfBatches,
+         userVehicle: vehicleGenome | undefined
     ) {
         this.currentWorld?.cleanUpCurrentGeneration(true);
 
@@ -66,6 +67,12 @@ export class WorldManager {
         }
 
         let population = this.populationStore.get(this.worldCounter)?.slice(this.lastBatchSize * this.currentBatch, this.lastBatchSize * this.currentBatch + this.lastBatchSize);
+        population = population ? population : [];
+
+        if (userVehicle != undefined) {
+            population.pop();
+            population.push(userVehicle);
+        }
 
         this.currentWorld = new ExtendedWorld(
             fastForward ? undefined : scene,
@@ -73,7 +80,7 @@ export class WorldManager {
             gravity,
             groundBodyContactMaterialOptions,
             this.worldIdCounter++,
-            population ? population : [],
+            population,
             this.currentPopulationManager,
             !fastForward
         );
