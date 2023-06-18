@@ -1,6 +1,7 @@
 import {ExtendedRigidVehicle} from "./ExtendedRigidVehicle";
 import {vehicleGenome} from "./ExtendedWorld";
 import {createNextGeneration} from "../GeneticAlgorithm/NextGeneration";
+import {calculateFitness} from "../GeneticAlgorithm/FitnessFunction";
 
 export type fitnessData = {
     id: number,
@@ -49,7 +50,7 @@ export class PopulationManager {
                     distanceTraveled: car.furthestPosition.x,
                     hasFinished: car.hasFinished,
                     timeInSteps: stepNumber,
-                    fitness: PopulationManager.calculateFitness(stepNumber, car.hasFinished, car.furthestPosition.x),
+                    fitness: calculateFitness(stepNumber, car.hasFinished, car.furthestPosition.x, car.vehicleMass, car.wheelMass),
                 }
             )
         } else {
@@ -61,16 +62,5 @@ export class PopulationManager {
 
     createNextGeneration(mutationRate: number): vehicleGenome[] {
         return createNextGeneration(mutationRate, this.fitnessData);
-    }
-
-    /**
-     * Calculates the fitness value according to the fitness function and the passed parameters.
-     * @param stepNumber is the time in steps.
-     * @param hasFinished declares if a vehicle has finished.
-     * @param distance the vehicle has traveled.
-     * @private
-     */
-    private static calculateFitness(stepNumber: number, hasFinished: boolean, distance: number): number {
-        return hasFinished ? distance + distance * 1000 / stepNumber : distance;
     }
 }

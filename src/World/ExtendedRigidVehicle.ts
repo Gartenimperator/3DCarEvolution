@@ -219,7 +219,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         this.constraints[this.wheelBodies.length - 1].equations[1].setSpookParams(Math.max(4000, 10000 + 60000 * stiffness + wheelMass), 6, 1 / 60);
 
-        this.vehicleMass = this.vehicleMass + wheelMass;
+        this.vehicleMass += wheelMass;
         this.wheelMass = this.wheelMass + wheelMass;
     }
 
@@ -231,7 +231,6 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param scene the wheel is added to.
      */
     addWheelMesh(radius: number, width: number, density: number, scene: THREE.Scene) {
-
         let wheelVisual = new THREE.CylinderGeometry(radius, radius, width, 26, 1);
         let wheelHood = new THREE.CylinderGeometry(radius * 0.8, radius * 0.8, width + 0.1, 20, 1);
 
@@ -243,7 +242,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         //https://stackoverflow.com/questions/14181631/changing-color-of-cube-in-three-js
         let wheelHoodMaterial = new THREE.MeshLambertMaterial();
-        wheelHoodMaterial.color = new THREE.Color(RainBowColor(density, vehGenConstants.maxDensityDiff));
+        wheelHoodMaterial.color = new THREE.Color(RainBowColor(density, vehGenConstants.minDensity + vehGenConstants.maxDensityDiff));
 
         let wheelMesh = new THREE.Mesh(wheelVisual, this.wheelMaterial);
         wheelMesh.add(new THREE.Mesh(wheelHood, wheelHoodMaterial));
@@ -386,6 +385,12 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
             if (wheelMass < 15) {
                 wheelForce = wheelForce * 0.7;
+            }
+
+            if (wheelMass < this.bodyMass) {
+                wheelForce = wheelForce * (1 - wheelMass / this.bodyMass) * (1 - wheelMass / this.bodyMass);
+            } else {
+                wheelForce = wheelMass;
             }
 
             wheelForce = wheel.canSteer ? wheelForce * 0.7 : wheelForce;

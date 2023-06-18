@@ -5,6 +5,7 @@ import Stats from 'three/examples/jsm/libs/stats.module';
 import {ExtendedWorld, vehicleGenome, wheel} from "./World/ExtendedWorld";
 import {WorldManager} from "./WorldManager";
 import {RainBowColor} from "./Utils/ColorCoder";
+import {vehGenConstants} from "./VehicleModel/VehicleGenerationConstants";
 
 let stats: any;
 
@@ -85,6 +86,8 @@ let fastForward: boolean = false;
 
 let userVehicle: vehicleGenome | undefined;
 
+let vehicleInputExample: String = '0,0,0,4,0,0,4,0,2,0,0,2,2,4,1, 2, -4,1|0.5,0.4,1,0.5,1,-5,1,0,0.5,0.4,1,1,-1,-5,1,0,0.5,0.4,1,1,1,-5,-1,0,0.5,0.4,1,1,-1,-5,-1,0';
+
 /**
  * WorldManager
  */
@@ -119,6 +122,7 @@ let trackPieceLengthXInputError = document.getElementById('trackPieceLengthXInpu
 let variablesInputConfirmation = document.getElementById('variablesInputConfirmation');
 let vehicleInput = document.getElementById('vehicleInput');
 let vehicleInputBtn = document.getElementById('addVehicleBtn');
+let vehicleInputConfirmation = document.getElementById('vehicleInputConfirmation');
 let vehicleInputError = document.getElementById('vehicleInputError');
 
 
@@ -161,6 +165,7 @@ function resetInputFields() {
     trackInput.value = trackGradients;
     trackPieceLengthXInput.value = trackPieceLength;
     variablesInputConfirmation.hidden = true;
+    vehicleInputConfirmation.hidden = true;
     autoRunCheckbox.disabled = false;
 }
 
@@ -233,7 +238,7 @@ function fastForwardFct() {
     }
 }
 
-function inputVehicle() {
+function parseInputVehicle() {
     let newGen: vehicleGenome = {
         bodyVectors: [],
         wheels: []
@@ -290,6 +295,7 @@ function inputVehicle() {
             }
         }
         vehicleInputError.hidden = true;
+        vehicleInputConfirmation.hidden = false;
         userVehicle = newGen;
     } else {
         vehicleInputError.hidden = false;
@@ -376,7 +382,7 @@ stopBtn.addEventListener("click", stopSimulation);
 continueBtn.addEventListener("click", continueSimulation);
 newPopulationBtn.addEventListener("click", restartSimulation);
 updateVariablesBtn.addEventListener('click', updateVariables);
-vehicleInputBtn.addEventListener('click', inputVehicle);
+vehicleInputBtn.addEventListener('click', parseInputVehicle);
 
 /**
  * Init Functions
@@ -409,11 +415,11 @@ function initGraphics() {
     dirLight.position.set(20, 20, 5);
     scene.add(dirLight);
 
-    let dirLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+    let dirLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
     dirLight2.position.set(20, 20, 60);
     scene.add(dirLight2);
-    let dirLight3 = new THREE.DirectionalLight(0xffffff, 0.5);
-    dirLight3.position.set(20, -20, 60);
+    let dirLight3 = new THREE.DirectionalLight(0xffffff, 0.3);
+    dirLight3.position.set(20, 20, -60);
     scene.add(dirLight3);
 
     materialDynamic = new THREE.MeshPhongMaterial({color: 0xfca400});
@@ -492,13 +498,15 @@ function render() {
 /**
  * main
  */
-
-for (var i = 0; i <= 100; i++) {
+//jobs to be done once onLoad.
+for (var i = 0; i <= 50; i++) {
     let temp = document.createElement('span');
     temp.innerHTML = '&#9608;';
-    temp.style.color = RainBowColor(i / 10, 10);
+    temp.style.color = RainBowColor(vehGenConstants.minDensity + i / 50, vehGenConstants.minDensity + vehGenConstants.maxDensityDiff);
     document.getElementById('color').append(temp);
 }
+
+vehicleInput.value = vehicleInputExample;
 
 startSimulation();
 render();

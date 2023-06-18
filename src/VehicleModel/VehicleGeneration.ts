@@ -37,7 +37,7 @@ export function createRandomWheel(): wheel {
         width: (roundToFour(vehGenConstants.minimalWidth + Math.random() * vehGenConstants.maximalWidth)),
 
         //Try to generate wheels which are touching the car
-        posX: roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * vehGenConstants.maxWheelPosition), //wheel position lengthwise
+        posX: roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * vehGenConstants.maxWheelPosition), //wheel position length
         posY: roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * vehGenConstants.maxWheelPosition), //wheel position height
         posZ: roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * vehGenConstants.maxWheelPosition), //wheel position width
 

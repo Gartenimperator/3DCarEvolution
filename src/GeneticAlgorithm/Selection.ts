@@ -2,18 +2,16 @@ import {vehicleGenome} from "../World/ExtendedWorld";
 import {fitnessData} from "../World/PopulationManager";
 
 export function oneRoundTournamentSelection(fitnessData: fitnessData[]) {
-    let tournamentSelection: vehicleGenome[] = [];
+    let carA = fitnessData[Math.floor(Math.random() * fitnessData.length)];
+    let carB = fitnessData[Math.floor(Math.random() * fitnessData.length)];
 
-    fitnessData.forEach((carA) => {
-        let carBPlacement = Math.floor(Math.random() * fitnessData.length);
-        if (carA.fitness > fitnessData[carBPlacement].fitness) {
-            if (carA.oldVehicleGen) {
-                tournamentSelection.push(carA.oldVehicleGen);
-            }
-        } else {
-            tournamentSelection.push(fitnessData[carBPlacement].oldVehicleGen);
-        }
-    });
+    while (carA == carB) {
+        carB = fitnessData[Math.floor(Math.random() * fitnessData.length)];
+    }
 
-    return tournamentSelection;
+    if (carA.fitness > carB.fitness) {
+        return carA;
+    } else {
+        return carB;
+    }
 }
