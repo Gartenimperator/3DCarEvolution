@@ -31,8 +31,9 @@ export function createNextGeneration(mutationRate: number, fitnessData: fitnessD
 
     //ATM only One Elite
     fitnessData = fitnessData.sort((a, b) => a.fitness - b.fitness);
+    
     newGeneration.pop();
-    newGeneration.push(fitnessData[0].oldVehicleGen);
+    newGeneration.push(fitnessData.pop().oldVehicleGen);
 
     return newGeneration;
 }

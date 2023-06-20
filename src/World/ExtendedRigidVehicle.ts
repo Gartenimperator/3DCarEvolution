@@ -18,6 +18,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     wheelMeshes: Mesh[] = [];
     visualBody: Mesh = new Mesh();
     furthestPosition: CANNON.Vec3 = new CANNON.Vec3(0, 0, 0);
+    lowestPoint: number = 1000;
     timeOut: number = 0;
     bodyMass: number = 0;
     vehicleMass: number = 0;
@@ -33,7 +34,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         color: 0x0000ff
     });
     vehicleGen: vehicleGenome;
-    faces: number[][];
+    private faces: number[][];
     hasFinished: boolean = false;
     private centeredBodyVectors: CANNON.Vec3[] = [];
     private activeWheels: wheel[] = [];
@@ -51,6 +52,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         this.addBody(physicalBodyMaterial, scene);
         this.addWheels(physicalWheelMaterial, scene);
+        this.adjustPosition();
     }
 
     /**
@@ -72,7 +74,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         let tempVol = getVolumeAndCentreOfMass(vertices, this.faces);
 
-        this.centeredBodyVectors = this.moveBodyCOMTo0(this.vehicleGen.bodyVectors, tempVol[1]);
+        this.centeredBodyVectors = this.moveBodyCOMTo0AndUpdateLowestPoint(this.vehicleGen.bodyVectors, tempVol[1]);
         let updatedVertices = toNumberArray(this.centeredBodyVectors);
 
         this.vehicleMass += tempVol[0] * 10;
@@ -81,7 +83,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         let chassisBody = new CANNON.Body({
             mass: this.bodyMass,
             material: bodyMaterial,
-            position: new CANNON.Vec3(0, 10, 0),
+            position: new CANNON.Vec3(0, 0, 0),
             collisionFilterGroup: Groups.GROUP1,
             collisionFilterMask: Groups.GROUP2 | Groups.GROUP3
         });
@@ -111,6 +113,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @private
      */
     private addWheels(physicalWheelMaterial: CANNON.Material | undefined, scene: THREE.Scene | undefined) {
+        let lowestWheelPosition = 1000;
         //Add wheels to the car.
         for (let i = 0; i < this.vehicleGen.wheels.length; i++) {
             if (physicalWheelMaterial != undefined) {
@@ -129,7 +132,14 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                 );
 
                 this.activeWheels.push(this.vehicleGen.wheels[i]);
+
+                if (lowestWheelPosition > (this.vehicleGen.wheels[i].posY - this.vehicleGen.wheels[i].radius)) {
+                    lowestWheelPosition = (this.vehicleGen.wheels[i].posY - this.vehicleGen.wheels[i].radius);
+                }
             }
+        }
+        if (lowestWheelPosition < this.lowestPoint) {
+            this.lowestPoint = lowestWheelPosition;
         }
     }
 
@@ -374,13 +384,13 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             let currentSpeed = this.wheelBodies[i].angularVelocity.length();
             let wheelMass = this.wheelBodies[i].mass;
 
-            let maxSpeed = 25;
+            let maxSpeed = 15;
             let wheelForce;
 
             if (currentSpeed > maxSpeed) {
-                wheelForce = wheelMass  * (- currentSpeed - 10);
+                wheelForce = - ((currentSpeed - maxSpeed) * (currentSpeed - maxSpeed)) * 1.5 * wheelMass + this.bodyMass * 2 / (1 + (200 / wheelMass) + maxSpeed * maxSpeed) + 2.5 * wheelMass * (-maxSpeed + 20 + maxSpeed);
             } else {
-                wheelForce = this.bodyMass / (1 + (200 / wheelMass) + currentSpeed * currentSpeed) + wheelMass  * (-currentSpeed + maxSpeed + 25);
+                wheelForce = this.bodyMass * 2 / (1 + (200 / wheelMass) + currentSpeed * currentSpeed) + 2.5 * wheelMass * (-currentSpeed + 20 + maxSpeed);
             }
 
             if (wheelMass < 15) {
@@ -396,6 +406,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             wheelForce = wheel.canSteer ? wheelForce * 0.7 : wheelForce;
 
             if (isNaN(wheelForce)) {
+                console.log("An Error has occured while simulating a vehicle!")
                 console.log(this);
                 carIsFine = false;
             } else {
@@ -405,11 +416,21 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         return carIsFine;
     }
 
-    private moveBodyCOMTo0(bodyVector: CANNON.Vec3[], com: CANNON.Vec3) {
+    private moveBodyCOMTo0AndUpdateLowestPoint(bodyVector: CANNON.Vec3[], com: CANNON.Vec3) {
         let centerBodyVectors: CANNON.Vec3[] = [];
-        bodyVector.forEach(vector => {
+        bodyVector.forEach((vector , i)=> {
             centerBodyVectors.push(vector.vsub(com));
+            if (this.lowestPoint > centerBodyVectors[i].y) {
+                this.lowestPoint = centerBodyVectors[i].y;
+            }
         })
         return centerBodyVectors;
+    }
+
+    private adjustPosition() {
+        this.chassisBody.position.set(0,-this.lowestPoint + 1,0);
+        this.wheelBodies.forEach(wheel => {
+            wheel.position.y += -this.lowestPoint + 1;
+        })
     }
 }

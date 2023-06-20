@@ -49,9 +49,7 @@ let steps: number[] = [
 let nowWorking: number[] = [0, 10, 0, 0, 45, -45, -90, 180, -90, 0, 0, 0, 0, -110, -45, 0, -30, -20, 0, 10, 10];
 let example: number[] = [0, 20,90,180,-90,-90,-150,0,0,0];
 let tumble: number[] = [-30, -30, -30, -30, -30, -30, -30, -30, -90, -90, -90, -90, -90, -90, -90, 0, 0, 0, 90, 90, 90, 90, -30, -30, -30, -30];
-let simpleTrack: number[] = [
-    0, 15, 10, 0, 10, 0, 10, 0, 30,20,10,0,20,30, 40, 40, 30, 20,-20,0,20,30,40,0,0,10,30,40,50,40,30, -30, -30, -30, -20, -10, 0, 10, 20,30,-90,-90,0,0,0,90,90,0,0,0];
-
+let simpleTrack: number[] = [0,0,0,0,15,10,0,10,0,10,0,20,20,10,-20,0,-30,0,10,20,30,20,30,40,30,20,-20,0,20,30,-40,0,0,10,30,40,50,40,30,0,-20,-30,-30,-30,-20,-10,0,10,20,30,40,0,0,0,-12,-35,0,0,0];
 /**
  * Include hurdles. May be spheres placed into the track. cylinder or convexCustomShape better?
  * CHeck for performance issues -> limit hurdles? how to regulate placement of hurdles?
@@ -86,7 +84,7 @@ let fastForward: boolean = false;
 
 let userVehicle: vehicleGenome | undefined;
 
-let vehicleInputExample: String = '0,0,0,4,0,0,4,0,2,0,0,2,2,4,1, 2, -4,1|0.5,0.4,1,0.5,1,-5,1,0,0.5,0.4,1,1,-1,-5,1,0,0.5,0.4,1,1,1,-5,-1,0,0.5,0.4,1,1,-1,-5,-1,0';
+let vehicleInputExample: String = '0,0,0,5,0,0,5,0,2,0,0,2,2,4,1, 2, -4,1|2,1,1,0.5,4,-5,2,0,1,0.4,1,1,-3,-5,1,0,2,1,1,1,4,-5,-2,0,1,0.4,1,1,-3,-5,-1,0';
 
 /**
  * WorldManager
@@ -97,31 +95,31 @@ let worldManager: WorldManager = new WorldManager(amountOfWorlds, batchSize, amo
 //TODO Use bootstrap for inputs?
 
 //HTML References
-let nextGenBtn = document.getElementById('nextGenerationBtn');
-let stopBtn = document.getElementById("stopBtn");
-let continueBtn = document.getElementById("continueBtn");
-let newPopulationBtn = document.getElementById("startSimulationBtn");
-let updateVariablesBtn = document.getElementById('updateVariables');
-let fastForwardInput = document.getElementById('fastForward');
-let fastForwardBtn = document.getElementById('fastForwardBtn');
+let nextGenBtn = <HTMLButtonElement>document.getElementById('nextGenerationBtn');
+let stopBtn = <HTMLButtonElement>document.getElementById("stopBtn");
+let continueBtn = <HTMLButtonElement>document.getElementById("continueBtn");
+let newPopulationBtn = <HTMLButtonElement>document.getElementById("startSimulationBtn");
+let updateVariablesBtn = <HTMLButtonElement>document.getElementById('updateVariables');
+let fastForwardInput = <HTMLInputElement>document.getElementById('fastForward');
+let fastForwardBtn = <HTMLButtonElement>document.getElementById('fastForwardBtn');
 let autoRunCheckbox = document.getElementById('autoRunCheckbox');
-let gravityInput = document.getElementById('gravity');
+let gravityInput = <HTMLInputElement>document.getElementById('gravity');
 let gravityInputError = document.getElementById('gravityInputError');
-let batchSizeInput = document.getElementById('batchSize');
+let batchSizeInput = <HTMLInputElement>document.getElementById('batchSize');
 let batchSizeInputError = document.getElementById('batchSizeInputError');
-let amountOfBatchesInput = document.getElementById('amountOfBatches');
+let amountOfBatchesInput = <HTMLInputElement>document.getElementById('amountOfBatches');
 let amountOfBatchesInputError = document.getElementById('amountOfBatchesInputError');
-let timeoutInput = document.getElementById('timeout');
+let timeoutInput = <HTMLInputElement>document.getElementById('timeout');
 let timeoutInputError = document.getElementById('timeoutInputError');
-let mutationRateInput = document.getElementById('mutationRate');
+let mutationRateInput = <HTMLInputElement>document.getElementById('mutationRate');
 let mutationRateInputError = document.getElementById('mutationRateInputError');
-let trackInput = document.getElementById('trackGradients');
+let trackInput = <HTMLInputElement>document.getElementById('trackGradients');
 let trackInputError = document.getElementById('trackGradientsInputError');
-let trackPieceLengthXInput = document.getElementById('trackPieceLengthX');
+let trackPieceLengthXInput = <HTMLInputElement>document.getElementById('trackPieceLengthX');
 let trackPieceLengthXInputError = document.getElementById('trackPieceLengthXInputError');
 let variablesInputConfirmation = document.getElementById('variablesInputConfirmation');
-let vehicleInput = document.getElementById('vehicleInput');
-let vehicleInputBtn = document.getElementById('addVehicleBtn');
+let vehicleInput = <HTMLInputElement>document.getElementById('vehicleInput');
+let vehicleInputBtn = <HTMLButtonElement>document.getElementById('addVehicleBtn');
 let vehicleInputConfirmation = document.getElementById('vehicleInputConfirmation');
 let vehicleInputError = document.getElementById('vehicleInputError');
 
@@ -141,8 +139,12 @@ function updateButtons(disableStopBtn: boolean, disableContinueBtn: boolean, dis
 }
 
 function next() {
-    initGraphics();
-    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions, false, batchSize, amountOfBatches, userVehicle);
+    if (!fastForward) {
+        initGraphics();
+    } else {
+        resetGraphics();
+    }
+    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions, fastForward, batchSize, amountOfBatches, userVehicle);
     userVehicle = undefined;
     currentWorld.initTrackWithGradients(trackGradients, trackPieceLength, trackPieceWidth, trackTexture, scene);
     currentWorld.cameraFocus.add(camera);
@@ -151,19 +153,19 @@ function next() {
 function updateInfoText() {
     infoText.innerHTML = 'Generation ' + worldManager.currentGen + '. Currently simulating batch ' + (1 + worldManager.currentBatch) + ' of world ' + worldManager.worldCounter + '.' +
         '\n Populationsize: ' + (worldManager.batchSize * (worldManager.batchAmount + 1));
-    fastForwardInput.value = fastForwardCounter;
+    fastForwardInput.value = String(fastForwardCounter);
 }
 
 function resetInputFields() {
     updateInfoText();
     hideErrorMsgs();
-    gravityInput.value = gravity;
-    batchSizeInput.value = batchSize;
-    amountOfBatchesInput.value = amountOfBatches;
-    timeoutInput.value = timeOut;
-    mutationRateInput.value = mutationRate;
-    trackInput.value = trackGradients;
-    trackPieceLengthXInput.value = trackPieceLength;
+    gravityInput.value = gravity.toString();
+    batchSizeInput.value = String(batchSize);
+    amountOfBatchesInput.value = String(amountOfBatches);
+    timeoutInput.value = String(timeOut);
+    mutationRateInput.value = String(mutationRate);
+    trackInput.value = trackGradients.toString();
+    trackPieceLengthXInput.value = String(trackPieceLength);
     variablesInputConfirmation.hidden = true;
     vehicleInputConfirmation.hidden = true;
     autoRunCheckbox.disabled = false;
@@ -208,8 +210,6 @@ function continueSimulation() {
 }
 
 function simulateNext() {
-    next();
-
     //Only fastForward after the current Generation has finished.
     if (fastForwardCounter > 0) {
         fastForward = true;
@@ -220,6 +220,7 @@ function simulateNext() {
         updateButtons(false, true, false, true, false);
         resetInputFields();
     }
+    next();
 }
 
 // custom round function
@@ -317,7 +318,7 @@ function updateVariables() {
                 canUpdate = false;
                 gravityInputError.hidden = false;
             } else {
-                newGravity[i] = roundToFive(vectorInput);
+                newGravity[i] = String(roundToFive(vectorInput));
             }
         })
     }
@@ -329,7 +330,7 @@ function updateVariables() {
             canUpdate = false;
             trackInputError.hidden = false;
         } else {
-            newTrackGradients[i] = vectorInput;
+            newTrackGradients[i] = String(vectorInput);
         }
     })
 
@@ -388,11 +389,15 @@ vehicleInputBtn.addEventListener('click', parseInputVehicle);
  * Init Functions
  */
 
-function initGraphics() {
-
+function resetGraphics() {
     renderer?.dispose();
     renderer?.forceContextLoss();
+    scene?.clear();
+}
 
+function initGraphics() {
+
+    resetGraphics();
     scene = new THREE.Scene();
 
     container = document.getElementById('simulationWindow');

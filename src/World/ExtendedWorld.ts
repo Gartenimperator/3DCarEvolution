@@ -92,7 +92,7 @@ export class ExtendedWorld extends World {
      * @param render
      */
     constructor(
-        scene: any,
+        scene: THREE.Scene | undefined,
         options: any,
         gravity: number[],
         groundBodyContactMaterialOptions: any,
@@ -110,7 +110,7 @@ export class ExtendedWorld extends World {
         this.broadphase = new CANNON.SAPBroadphase(this);
         this.gravity.set(gravity[0], gravity[1], gravity[2]);
 
-        scene.add(this.cameraFocus);
+        scene?.add(this.cameraFocus);
 
         this.initCarGroundContact(
             groundBodyContactMaterialOptions
@@ -132,7 +132,7 @@ export class ExtendedWorld extends World {
      * vehicleGens, then fill the slots with random vehicles. Otherwise the population has been decreased and
      * from the passed vehicleGens only the amount of the new PopulationSize are added.
      */
-    initPopulation(population: vehicleGenome[], scene: any) {
+    initPopulation(population: vehicleGenome[], scene: THREE.Scene | undefined) {
         if ((this.populationManager.batchSize - population.length) >= 0) { // Population got increased by the user.
 
             population.map((vehicleGenome) => {
@@ -155,7 +155,7 @@ export class ExtendedWorld extends World {
      * @param vehicleGenome which details the vehicle.
      * @param scene
      */
-    addCar(vehicleGenome: vehicleGenome, scene: any) {
+    addCar(vehicleGenome: vehicleGenome, scene: THREE.Scene | undefined) {
 
         let vehicle = new ExtendedRigidVehicle(
             vehicleGenome,
