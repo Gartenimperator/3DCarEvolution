@@ -33,7 +33,7 @@ export function createNextGeneration(mutationRate: number, fitnessData: fitnessD
     fitnessData = fitnessData.sort((a, b) => a.fitness - b.fitness);
     
     newGeneration.pop();
-    newGeneration.push(fitnessData.pop().oldVehicleGen);
+    newGeneration.push(fitnessData.pop()!.oldVehicleGen);
 
     return newGeneration;
 }

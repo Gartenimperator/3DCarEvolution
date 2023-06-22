@@ -13,7 +13,7 @@ let stats: any;
 let container: HTMLElement | null;
 let camera: THREE.PerspectiveCamera, renderer: any;
 
-let scene = new THREE.Scene();
+let scene: any;
 
 // for more Info on why the fakeCamera: https://stackoverflow.com/questions/53292145/forcing-orbitcontrols-to-navigate-around-a-moving-object-almost-working/53298655#53298655
 let fakeCamera: THREE.PerspectiveCamera;
@@ -47,9 +47,9 @@ let steps: number[] = [
 ];
 
 let nowWorking: number[] = [0, 10, 0, 0, 45, -45, -90, 180, -90, 0, 0, 0, 0, -110, -45, 0, -30, -20, 0, 10, 10];
-let example: number[] = [0, 20,90,180,-90,-90,-150,0,0,0];
+let example: number[] = [0, 20, 90, 180, -90, -90, -150, 0, 0, 0];
 let tumble: number[] = [-30, -30, -30, -30, -30, -30, -30, -30, -90, -90, -90, -90, -90, -90, -90, 0, 0, 0, 90, 90, 90, 90, -30, -30, -30, -30];
-let simpleTrack: number[] = [0,0,0,0,15,10,0,10,0,10,0,20,20,10,-20,0,-30,0,10,20,30,20,30,40,30,20,-20,0,20,30,-40,0,0,10,30,40,50,40,30,0,-20,-30,-30,-30,-20,-10,0,10,20,30,40,0,0,0,-12,-35,0,0,0];
+let simpleTrack: number[] = [0, 0, 0, 0, 15, 10, 0, 10, 0, 10, 0, 20, 20, 10, -20, 0, -30, 0, 10, 20, 30, 20, 30, 40, 30, 20, -20, 0, 20, 30, -40, 0, 0, 10, 30, 40, 50, 40, 30, 0, -20, -30, -30, -30, -20, -10, 0, 10, 20, 30, 40, 0, 0, 0, -12, -35, 0, 0, 0];
 /**
  * Include hurdles. May be spheres placed into the track. cylinder or convexCustomShape better?
  * CHeck for performance issues -> limit hurdles? how to regulate placement of hurdles?
@@ -84,7 +84,7 @@ let fastForward: boolean = false;
 
 let userVehicle: vehicleGenome | undefined;
 
-let vehicleInputExample: String = '0,0,0,5,0,0,5,0,2,0,0,2,2,4,1, 2, -4,1|2,1,1,0.5,4,-5,2,0,1,0.4,1,1,-3,-5,1,0,2,1,1,1,4,-5,-2,0,1,0.4,1,1,-3,-5,-1,0';
+let vehicleInputExample: string = '0,0,0,5,0,0,5,0,2,0,0,2,2,4,1, 2, -4,1|2,1,1,0.5,4,-5,2,0,1,0.4,1,1,-3,-5,1,0,2,1,1,1,4,-5,-2,0,1,0.4,1,1,-3,-5,-1,0';
 
 /**
  * WorldManager
@@ -95,36 +95,36 @@ let worldManager: WorldManager = new WorldManager(amountOfWorlds, batchSize, amo
 //TODO Use bootstrap for inputs?
 
 //HTML References
-let nextGenBtn = <HTMLButtonElement>document.getElementById('nextGenerationBtn');
-let stopBtn = <HTMLButtonElement>document.getElementById("stopBtn");
-let continueBtn = <HTMLButtonElement>document.getElementById("continueBtn");
-let newPopulationBtn = <HTMLButtonElement>document.getElementById("startSimulationBtn");
-let updateVariablesBtn = <HTMLButtonElement>document.getElementById('updateVariables');
-let fastForwardInput = <HTMLInputElement>document.getElementById('fastForward');
-let fastForwardBtn = <HTMLButtonElement>document.getElementById('fastForwardBtn');
-let autoRunCheckbox = document.getElementById('autoRunCheckbox');
-let gravityInput = <HTMLInputElement>document.getElementById('gravity');
-let gravityInputError = document.getElementById('gravityInputError');
-let batchSizeInput = <HTMLInputElement>document.getElementById('batchSize');
-let batchSizeInputError = document.getElementById('batchSizeInputError');
-let amountOfBatchesInput = <HTMLInputElement>document.getElementById('amountOfBatches');
-let amountOfBatchesInputError = document.getElementById('amountOfBatchesInputError');
-let timeoutInput = <HTMLInputElement>document.getElementById('timeout');
-let timeoutInputError = document.getElementById('timeoutInputError');
-let mutationRateInput = <HTMLInputElement>document.getElementById('mutationRate');
-let mutationRateInputError = document.getElementById('mutationRateInputError');
-let trackInput = <HTMLInputElement>document.getElementById('trackGradients');
-let trackInputError = document.getElementById('trackGradientsInputError');
-let trackPieceLengthXInput = <HTMLInputElement>document.getElementById('trackPieceLengthX');
-let trackPieceLengthXInputError = document.getElementById('trackPieceLengthXInputError');
-let variablesInputConfirmation = document.getElementById('variablesInputConfirmation');
-let vehicleInput = <HTMLInputElement>document.getElementById('vehicleInput');
-let vehicleInputBtn = <HTMLButtonElement>document.getElementById('addVehicleBtn');
-let vehicleInputConfirmation = document.getElementById('vehicleInputConfirmation');
-let vehicleInputError = document.getElementById('vehicleInputError');
+let nextGenBtn = <HTMLButtonElement>document.getElementById('nextGenerationBtn')!;
+let stopBtn = <HTMLButtonElement>document.getElementById("stopBtn")!;
+let continueBtn = <HTMLButtonElement>document.getElementById("continueBtn")!;
+let newPopulationBtn = <HTMLButtonElement>document.getElementById("startSimulationBtn")!;
+let updateVariablesBtn = <HTMLButtonElement>document.getElementById('updateVariables')!;
+let fastForwardInput = <HTMLInputElement>document.getElementById('fastForward')!;
+let fastForwardBtn = <HTMLButtonElement>document.getElementById('fastForwardBtn')!;
+let autoRunCheckbox = <HTMLInputElement>document.getElementById('autoRunCheckbox')!;
+let realisticWheelsCheckbox = <HTMLInputElement>document.getElementById('realisticWheelsCheckbox')!;
+let gravityInput = <HTMLInputElement>document.getElementById('gravity')!;
+let gravityInputError = document.getElementById('gravityInputError')!;
+let batchSizeInput = <HTMLInputElement>document.getElementById('batchSize')!;
+let batchSizeInputError = document.getElementById('batchSizeInputError')!;
+let amountOfBatchesInput = <HTMLInputElement>document.getElementById('amountOfBatches')!;
+let amountOfBatchesInputError = document.getElementById('amountOfBatchesInputError')!;
+let timeoutInput = <HTMLInputElement>document.getElementById('timeout')!;
+let timeoutInputError = document.getElementById('timeoutInputError')!;
+let mutationRateInput = <HTMLInputElement>document.getElementById('mutationRate')!;
+let mutationRateInputError = document.getElementById('mutationRateInputError')!;
+let trackInput = <HTMLInputElement>document.getElementById('trackGradients')!;
+let trackInputError = document.getElementById('trackGradientsInputError')!;
+let trackPieceLengthXInput = <HTMLInputElement>document.getElementById('trackPieceLengthX')!;
+let trackPieceLengthXInputError = document.getElementById('trackPieceLengthXInputError')!;
+let variablesInputConfirmation = document.getElementById('variablesInputConfirmation')!;
+let vehicleInput = <HTMLInputElement>document.getElementById('vehicleInput')!;
+let vehicleInputBtn = <HTMLButtonElement>document.getElementById('addVehicleBtn')!;
+let vehicleInputConfirmation = document.getElementById('vehicleInputConfirmation')!;
+let vehicleInputError = document.getElementById('vehicleInputError')!;
 
-
-let infoText = document.getElementById('currentBatchInfo');
+let infoText = document.getElementById('currentBatchInfo')!;
 
 /**
  * Input listeners
@@ -139,12 +139,11 @@ function updateButtons(disableStopBtn: boolean, disableContinueBtn: boolean, dis
 }
 
 function next() {
+    currentWorld?.cleanUpCurrentGeneration(true, scene);
     if (!fastForward) {
         initGraphics();
-    } else {
-        resetGraphics();
     }
-    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions, fastForward, batchSize, amountOfBatches, userVehicle);
+    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions, fastForward, batchSize, amountOfBatches, !realisticWheelsCheckbox.checked, userVehicle);
     userVehicle = undefined;
     currentWorld.initTrackWithGradients(trackGradients, trackPieceLength, trackPieceWidth, trackTexture, scene);
     currentWorld.cameraFocus.add(camera);
@@ -255,8 +254,8 @@ function parseInputVehicle() {
                 let y = parseFloat(bodyVectors[i + 1]);
                 let z = parseFloat(bodyVectors[i + 2]);
 
-                if (-10 < x && 10 > x && -10 < y && 10 > y && -10 < z && 10 > z) {
-                    newGen.bodyVectors.push(new CANNON.Vec3(x,y,z));
+                if (-20 < x && 20 > x && -20 < y && 20 > y && -20 < z && 20 > z) {
+                    newGen.bodyVectors.push(new CANNON.Vec3(x, y, z));
                 } else {
                     vehicleInputError.hidden = false;
                     return;
@@ -269,25 +268,17 @@ function parseInputVehicle() {
 
         if (wheelVectors.length % 8 === 0 && wheelVectors.length >= 8) {
             for (let i = 0; i < wheelVectors.length; i += 8) {
-                let wheelGen: wheel;
-                try {
-                    wheelGen = {
-                        radius:parseFloat(wheelVectors[i]),
-                        width:parseFloat(wheelVectors[i + 1]),
-                        density:parseFloat(wheelVectors[i + 2]),
-                        stiffness:parseFloat(wheelVectors[i + 3]),
-                        posX:parseFloat(wheelVectors[i + 4]),
-                        posY:parseFloat(wheelVectors[i + 5]),
-                        posZ:parseFloat(wheelVectors[i + 6]),
-                        canSteer:parseInt(wheelVectors[i + 7]) === 1,
-                    };
-                } catch (e) {
-                    console.log('Error');
-                    vehicleInputError.hidden = false;
-                    return;
-                } finally {
-                    newGen.wheels.push(wheelGen);
-                }
+                let wheelGen = {
+                    radius: parseFloat(wheelVectors[i]),
+                    width: parseFloat(wheelVectors[i + 1]),
+                    density: parseFloat(wheelVectors[i + 2]),
+                    stiffness: parseFloat(wheelVectors[i + 3]),
+                    posX: parseFloat(wheelVectors[i + 4]),
+                    posY: parseFloat(wheelVectors[i + 5]),
+                    posZ: parseFloat(wheelVectors[i + 6]),
+                    canSteer: parseInt(wheelVectors[i + 7]) === 1,
+                };
+                newGen.wheels.push(wheelGen);
             }
         } else {
             if (!(wheelVectors[0] == '')) {
@@ -307,30 +298,32 @@ function parseInputVehicle() {
 function updateVariables() {
     let canUpdate = true;
 
-    let newGravity = gravityInput.value.split(',');
-    if (!(newGravity.length === 3)) {
+    let newGravityString = gravityInput.value.split(',');
+    let newGravity: number[] = [];
+    if (!(newGravityString.length === 3)) {
         canUpdate = false;
         gravityInputError.hidden = false;
     } else {
-        newGravity.forEach((input, i) => {
+        newGravityString.forEach((input, i) => {
             let vectorInput = parseFloat(input);
             if (!(vectorInput >= -100 && vectorInput <= 100)) {
                 canUpdate = false;
                 gravityInputError.hidden = false;
             } else {
-                newGravity[i] = String(roundToFive(vectorInput));
+                newGravity[i] = roundToFive(vectorInput);
             }
         })
     }
 
-    let newTrackGradients = trackInput.value.split(',');
-    newTrackGradients.forEach((input, i) => {
+    let newTrackGradientString = trackInput.value.split(',');
+    let newTrackGradients: number[] = [];
+    newTrackGradientString.forEach((input, i) => {
         let vectorInput = parseInt(input);
         if (!(vectorInput >= -180 && vectorInput <= 180)) {
             canUpdate = false;
             trackInputError.hidden = false;
         } else {
-            newTrackGradients[i] = String(vectorInput);
+            newTrackGradients[i] = vectorInput;
         }
     })
 
@@ -391,13 +384,15 @@ vehicleInputBtn.addEventListener('click', parseInputVehicle);
 
 function resetGraphics() {
     renderer?.dispose();
-    renderer?.forceContextLoss();
     scene?.clear();
+    renderer = null;
+    scene = null;
 }
 
 function initGraphics() {
 
-    resetGraphics();
+    renderer?.dispose();
+    scene?.clear();
     scene = new THREE.Scene();
 
     container = document.getElementById('simulationWindow');
@@ -467,10 +462,14 @@ function initGraphics() {
 function updatePhysics() {
     currentWorld.extendedStep(frameTime, timeOut);
     //Update cannon debug renderer here for debug.
+    //currentWorld.cannonDebugRenderer.update();
     if (!currentWorld.isActive()) {
-        document.getElementById("stopBtn").disabled = true;
-        document.getElementById("continueBtn").disabled = true;
-        document.getElementById("nextGenerationBtn").disabled = false;
+        let temp = <HTMLButtonElement>document.getElementById("stopBtn");
+        temp.disabled = true;
+        temp = <HTMLButtonElement>document.getElementById("continueBtn");
+        temp.disabled = true;
+        temp = <HTMLButtonElement>document.getElementById("nextGenerationBtn");
+        temp.disabled = false;
     }
 }
 
@@ -479,16 +478,15 @@ function updatePhysics() {
  */
 function render() {
 
-    camera.copy(fakeCamera);
-    requestAnimationFrame(render);
-    renderer.render(scene, camera);
-
     if (fastForward && fastForwardCounter > 0) {
         while (currentWorld.isActive()) {
             updatePhysics();
         }
         fastForwardCounter--;
-        simulateNext();
+        setTimeout(function () {
+            simulateNext();
+            render();
+        }, 5);
     } else {
 
         if (currentWorld.isActive() && simulateThisGeneration) {
@@ -496,6 +494,10 @@ function render() {
         } else if (autoRunCheckbox.checked && simulateThisGeneration) {
             simulateNext();
         }
+
+        camera.copy(fakeCamera);
+        renderer.render(scene, camera);
+        requestAnimationFrame(render);
         stats.update();
     }
 }
@@ -503,15 +505,19 @@ function render() {
 /**
  * main
  */
-//jobs to be done once onLoad.
+//jobs to be done once on Load.
 for (var i = 0; i <= 50; i++) {
-    let temp = document.createElement('span');
+    let temp = document.createElement('span')!;
     temp.innerHTML = '&#9608;';
     temp.style.color = RainBowColor(vehGenConstants.minDensity + i / 50, vehGenConstants.minDensity + vehGenConstants.maxDensityDiff);
-    document.getElementById('color').append(temp);
+    document.getElementById('color')!.append(temp);
 }
 
 vehicleInput.value = vehicleInputExample;
+var worker = new Worker('World.js');
+worker.postMessage({
+    cannonUrl: document.location.href.replace(/\/[^/]*$/, "/") + "../build/cannon.js"
+})
 
 startSimulation();
 render();

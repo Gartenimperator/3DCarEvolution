@@ -79,6 +79,7 @@ export class ExtendedWorld extends World {
     };
     render: boolean = false;
     disabled: boolean = false;
+    useRealisticWheels: boolean;
 
     /**
      *
@@ -96,6 +97,7 @@ export class ExtendedWorld extends World {
         options: any,
         gravity: number[],
         groundBodyContactMaterialOptions: any,
+        useRealisticWheels: boolean,
         id: number,
         population: vehicleGenome[],
         populationManager: PopulationManager,
@@ -106,6 +108,7 @@ export class ExtendedWorld extends World {
         this.carIdCounter = id * populationManager.batchSize;
         this.populationManager = populationManager;
         this.render = render;
+        this.useRealisticWheels = useRealisticWheels;
 
         this.broadphase = new CANNON.SAPBroadphase(this);
         this.gravity.set(gravity[0], gravity[1], gravity[2]);
@@ -120,11 +123,15 @@ export class ExtendedWorld extends World {
         this.leadingCar = new ExtendedRigidVehicle({
             bodyVectors: [],
             wheels: []
-        }, undefined, undefined, undefined, -1);
+        }, undefined, undefined, true, undefined, -1);
         this.leadingCar.chassisBody.position.set(-1, 0, 0);
 
         //Uncomment to enable debugging.
-        //this.cannonDebugRenderer = CannonDebugger(scene, this);
+        /*
+        if (scene) {
+            this.cannonDebugRenderer = CannonDebugger(scene, this);
+        }
+         */
     }
 
     /**
@@ -161,6 +168,7 @@ export class ExtendedWorld extends World {
             vehicleGenome,
             this.bodyMaterial,
             this.wheelMaterialHighFriction,
+            this.useRealisticWheels,
             this.render ? scene : undefined,
             this.carIdCounter++
         );
@@ -179,6 +187,7 @@ export class ExtendedWorld extends World {
                 vehicleGenome,
                 this.bodyMaterial,
                 this.wheelMaterialHighFriction,
+                this.useRealisticWheels,
                 undefined,
                 this.carIdCounter++
             );
@@ -351,17 +360,18 @@ export class ExtendedWorld extends World {
     initTrackWithGradients(gradients: number[], length: number, width: number, trackTexture: THREE.MeshStandardMaterial, scene) {
         length = length/2;
         this.track.trackWidth = width / 2;
+        let trackThickness = 1
 
         let rotateParallelToZAxis: CANNON.Quaternion;
 
-        let trackPieceShape = new CANNON.Box(new CANNON.Vec3(length, 0.5, this.track.trackWidth));
+        let trackPieceShape = new CANNON.Box(new CANNON.Vec3(length, trackThickness, this.track.trackWidth));
         let lowestTrackPoint: number = 0;
 
         //The Track always starts on a 10m * width plane to allow the cars to spawn correctly
         let trackStart = new CANNON.Body({
             mass: 0, // mass = 0 makes the body static
             material: this.groundMaterial,
-            shape: new CANNON.Box(new CANNON.Vec3(10, 0.5, this.track.trackWidth)),
+            shape: new CANNON.Box(new CANNON.Vec3(10, trackThickness, this.track.trackWidth)),
             collisionFilterGroup: Groups.GROUP2,
             collisionFilterMask: Groups.GROUP1
         });
@@ -370,7 +380,7 @@ export class ExtendedWorld extends World {
         this.track.trackPieces.push(trackStart);
 
         if (this.render) {
-            let geometry = new THREE.BoxGeometry(10 * 2, 1, this.track.trackWidth * 2); // double chasis shape
+            let geometry = new THREE.BoxGeometry(10 * 2, trackThickness * 2, this.track.trackWidth * 2); // double chasis shape
             let trackStartVisual = new THREE.Mesh(geometry, trackTexture);
 
             this.copyPosition(trackStart, trackStartVisual);
@@ -433,7 +443,7 @@ export class ExtendedWorld extends World {
             //Add visual Body
             if (this.render) {
 
-                let geometry = new THREE.BoxGeometry(length * 2, 1, this.track.trackWidth * 2); // double chasis shape
+                let geometry = new THREE.BoxGeometry(length * 2, trackThickness * 2, this.track.trackWidth * 2); // double chasis shape
                 let trackVisual = new THREE.Mesh(geometry, trackTexture);
 
                 const posBody = trackPiece.position;
@@ -466,62 +476,12 @@ export class ExtendedWorld extends World {
     /**
      * Removes the soon-to-be old THREE.Meshes of each vehicle.
      */
-    cleanUpCurrentGeneration(removeTrack: boolean) {
+    cleanUpCurrentGeneration(removeTrack: boolean, scene: THREE.Scene | undefined) {
 
         this.populationManager.activeCars.forEach(vehicle => {
-
-            this.populationManager.disableCar(vehicle, this.stepnumber);
-            vehicle.wheelMeshes.forEach(wheelMesh => {
-                this.removeObjectFromScene(wheelMesh);
-            })
-
-            this.removeBody(vehicle.chassisBody);
-            vehicle.wheelBodies.forEach(wheel => {
-                this.removeBody(wheel);
-            })
-
-            this.removeObjectFromScene(vehicle.visualBody);
-            this.removeObjectFromScene(vehicle.wheelMaterial);
-            this.removeObjectFromScene(vehicle.bodyMaterial);
+            this.removeVehicle(vehicle);
         })
         this.populationManager.activeCars.clear();
-
-        if (removeTrack) {
-            this.removeTrack();
-        }
-    }
-
-    /**
-     * Removes the physical and visual bodies of the track.
-     */
-    removeTrack() {
-        while (this.track.trackPieces.length) {
-            this.removeBody(this.track.trackPieces.pop());
-            this.removeObjectFromScene(this.track.threeJSTrackPieces.pop());
-        }
-    }
-
-    /**
-     * Removing an Object from the scene needs to be done correctly to avoid memory leaks, as
-     * the render and the scene itself can store separate references.
-     * @param object3D the object to be removed from the scene.
-     */
-    removeObjectFromScene(object3D) {
-        if (!(object3D instanceof Object3D)) return false;
-
-        // for better memory management and performance
-        if (object3D.geometry) object3D.geometry.dispose();
-
-        if (object3D.material) {
-            if (object3D.material instanceof Array) {
-                // for better memory management and performance
-                object3D.material.forEach(material => material.dispose());
-            } else {
-                // for better memory management and performance
-                object3D.material.dispose();
-            }
-        }
-        object3D.removeFromParent(); // the parent might be the scene or another Object3D, but it is sure to be removed this way
-        return true;
+        scene?.clear();
     }
 }

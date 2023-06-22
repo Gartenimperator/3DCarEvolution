@@ -4,11 +4,11 @@ import * as THREE from "three";
 import {Material, Mesh, Scene} from "three";
 import {Groups} from "../Utils/Groups";
 import {vehicleGenome, wheel} from "./ExtendedWorld";
-import qh, {isPointInsideHull} from 'quickhull3d';
+import qh from 'quickhull3d';
 import {vehGenConstants} from "../VehicleModel/VehicleGenerationConstants";
 import {RainBowColor} from "../Utils/ColorCoder";
-import {getVolumeAndCentreOfMass} from "../Utils/ConvexPolyhedronHelperFunctions";
-import {toNumberArray} from "../Utils/VehicleGenArrayHelper";
+import {getVolumeAndCentreOfMass, intersectLineAndPlane} from "../Utils/ConvexPolyhedronHelperFunctions";
+import {toNumberArray, toSplitArray} from "../Utils/VehicleGenArrayHelper";
 
 /**
  * Extends the existing CANNON.RigidVehicle class to make interaction between Three and Cannon easier.
@@ -18,7 +18,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     wheelMeshes: Mesh[] = [];
     visualBody: Mesh = new Mesh();
     furthestPosition: CANNON.Vec3 = new CANNON.Vec3(0, 0, 0);
-    lowestPoint: number = 1000;
+    lowestPoint: number = 100;
     timeOut: number = 0;
     bodyMass: number = 0;
     vehicleMass: number = 0;
@@ -34,7 +34,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         color: 0x0000ff
     });
     vehicleGen: vehicleGenome;
-    private faces: number[][];
+    private faces: number[][]= [];
     hasFinished: boolean = false;
     private centeredBodyVectors: CANNON.Vec3[] = [];
     private activeWheels: wheel[] = [];
@@ -43,6 +43,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         vehicleGen: vehicleGenome,
         physicalBodyMaterial: CANNON.Material | undefined,
         physicalWheelMaterial: CANNON.Material | undefined,
+        useRealisticWheels: boolean,
         scene: Scene | undefined,
         id: number
     ) {
@@ -51,7 +52,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         this.id = id;
 
         this.addBody(physicalBodyMaterial, scene);
-        this.addWheels(physicalWheelMaterial, scene);
+        this.addWheels(physicalWheelMaterial, scene, useRealisticWheels);
         this.adjustPosition();
     }
 
@@ -112,7 +113,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param physicalWheelMaterial physicalMaterial of the wheel.
      * @private
      */
-    private addWheels(physicalWheelMaterial: CANNON.Material | undefined, scene: THREE.Scene | undefined) {
+    private addWheels(physicalWheelMaterial: CANNON.Material | undefined, scene: THREE.Scene | undefined, useRealisticWheels: boolean) {
         let lowestWheelPosition = 1000;
         //Add wheels to the car.
         for (let i = 0; i < this.vehicleGen.wheels.length; i++) {
@@ -127,6 +128,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                     this.vehicleGen.wheels[i].density,
                     this.vehicleGen.wheels[i].stiffness,
                     this.vehicleGen.wheels[i].canSteer,
+                    useRealisticWheels,
                     physicalWheelMaterial,
                     scene
                 );
@@ -152,6 +154,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param positionZ
      * @param density of the wheel.
      * @param stiffness
+     * @param slowPcMode
      * @param physicalWheelMaterial of the wheel. If the param is undefined no physical CANNON.Body will be created.
      * @param canSteer defines if the wheel is steerable or not.
      * @param scene the wheel is placed inside of. If the param is undefined no visual THREE.Mesh will be created.
@@ -165,17 +168,18 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         density: number,
         stiffness: number,
         canSteer: boolean,
+        useRealisticWheels: boolean,
         physicalWheelMaterial: CANNON.Material,
         scene: THREE.Scene | undefined
     ) {
         //Add wheel physical body
         if (physicalWheelMaterial) {
-            this.addPhysicalWheel(radius, width, positionX, positionY, positionZ, density, stiffness, physicalWheelMaterial, canSteer);
+            this.addPhysicalWheel(radius, width, positionX, positionY, positionZ, density, stiffness, physicalWheelMaterial, canSteer, useRealisticWheels);
         }
 
         //Add wheel visual body
         if (scene != undefined) {
-            this.addWheelMesh(radius, width, density, scene);
+            this.addWheelMesh(radius, width, density, scene, useRealisticWheels);
         }
     }
 
@@ -200,8 +204,18 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                              density: number,
                              stiffness: number,
                              physicalWheelMaterial: CANNON.Material,
-                             canSteer: boolean) {
-        const wheelVolume = Math.PI * width * (radius * radius);
+                             canSteer: boolean,
+                             useRealisticWheels: boolean) {
+        let shape;
+        let wheelVolume = 0;
+
+        if (useRealisticWheels) {
+            shape = new CANNON.Cylinder(radius, radius, width, 25);
+            wheelVolume = Math.PI * width * (radius * radius);
+        } else {
+            shape = new CANNON.Sphere(radius);
+            wheelVolume = Math.PI * width * (radius * radius);
+        }
 
         let wheelMass = wheelVolume * density * 10;
 
@@ -215,15 +229,16 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         new THREE.Euler();
 
         const rotateParallelToXAxis = new CANNON.Quaternion().setFromEuler(Math.PI / 2, 0, 0);
-        const shape = new CANNON.Cylinder(radius, radius, width, 25);
+
         wheelBody.addShape(shape, new CANNON.Vec3(), rotateParallelToXAxis);
         wheelBody.angularDamping = 0.7;
 
         //TODO Calc correct wheel pos here
 
+
         this.addWheel({
             body: wheelBody,
-            position: new CANNON.Vec3(positionX, positionY, positionZ),
+            position: this.getCorrectWheelPosition(positionX, positionY, positionZ),
             axis: new CANNON.Vec3(0, 0, -1)
         });
 
@@ -240,24 +255,37 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param density
      * @param scene the wheel is added to.
      */
-    addWheelMesh(radius: number, width: number, density: number, scene: THREE.Scene) {
-        let wheelVisual = new THREE.CylinderGeometry(radius, radius, width, 26, 1);
-        let wheelHood = new THREE.CylinderGeometry(radius * 0.8, radius * 0.8, width + 0.1, 20, 1);
+    addWheelMesh(radius: number, width: number, density: number, scene: THREE.Scene, useRealisticWheels: boolean) {
+        let wheelVisual;
+        let wheelHood;
+        let wheelMesh;
 
-        //rotate so it aligns with the wheels pointing towards the CANNON.js x-coordinate.
-        wheelVisual.rotateZ(Math.PI / 2);
-        wheelHood.rotateZ(Math.PI / 2);
-        wheelVisual.rotateY(Math.PI / 2);
-        wheelHood.rotateY(Math.PI / 2);
+        if (useRealisticWheels) {
+            wheelVisual = new THREE.CylinderGeometry(radius, radius, width, 26, 1);
+            wheelHood = new THREE.CylinderGeometry(radius * 0.8, radius * 0.8, width + 0.1, 20, 1);
 
-        //https://stackoverflow.com/questions/14181631/changing-color-of-cube-in-three-js
-        let wheelHoodMaterial = new THREE.MeshLambertMaterial();
-        wheelHoodMaterial.color = new THREE.Color(RainBowColor(density, vehGenConstants.minDensity + vehGenConstants.maxDensityDiff));
+            //rotate so it aligns with the wheels pointing towards the CANNON.js x-coordinate.
+            wheelVisual.rotateZ(Math.PI / 2);
+            wheelHood.rotateZ(Math.PI / 2);
+            wheelVisual.rotateY(Math.PI / 2);
+            wheelHood.rotateY(Math.PI / 2);
 
-        let wheelMesh = new THREE.Mesh(wheelVisual, this.wheelMaterial);
-        wheelMesh.add(new THREE.Mesh(wheelHood, wheelHoodMaterial));
-        wheelMesh.add(new THREE.Mesh(new THREE.BoxGeometry(radius * 0.6, radius * 0.2, width + 0.15), this.wheelMaterial));
-        wheelMesh.add(new THREE.Mesh(new THREE.BoxGeometry(radius * 2, radius * 0.2, width - 0.05), wheelHoodMaterial));
+            let wheelHoodMaterial = new THREE.MeshLambertMaterial();
+            wheelHoodMaterial.color = new THREE.Color(RainBowColor(density, vehGenConstants.minDensity + vehGenConstants.maxDensityDiff));
+            wheelMesh = new THREE.Mesh(wheelVisual, this.wheelMaterial);
+            wheelMesh.add(new THREE.Mesh(wheelHood, wheelHoodMaterial));
+            wheelMesh.add(new THREE.Mesh(new THREE.BoxGeometry(radius * 0.6, radius * 0.2, width + 0.15), this.wheelMaterial));
+            wheelMesh.add(new THREE.Mesh(new THREE.BoxGeometry(radius * 2, radius * 0.2, width - 0.05), wheelHoodMaterial));
+        } else {
+            wheelVisual = new THREE.SphereGeometry(radius);
+
+            let wheelVisualMaterial = new THREE.MeshLambertMaterial();
+            wheelVisualMaterial.color = new THREE.Color(RainBowColor(density, vehGenConstants.minDensity + vehGenConstants.maxDensityDiff));
+            wheelMesh = new THREE.Mesh(wheelVisual, wheelVisualMaterial);
+            wheelMesh.add(new THREE.Mesh(new THREE.BoxGeometry(radius * 2, radius * 0.15, radius * 0.15), this.wheelMaterial).rotateZ(90));
+            wheelMesh.add(new THREE.Mesh(new THREE.BoxGeometry(radius * 2, radius * 0.15, radius * 0.15), this.wheelMaterial));
+        }
+
         scene.add(wheelMesh);
         this.wheelMeshes.push(wheelMesh);
     }
@@ -330,11 +358,11 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param vertices contain all of the Vertices.
      * @param faces define the faces created by the vertices.
      */
-    createThreeMesh(vertices: number[[]], faces: number[[]]): THREE.Mesh {
+    createThreeMesh(vertices: number[][], faces: number[][]): THREE.Mesh {
 
         let convertedVertices: number[] = [];
 
-        const points = [];
+        const points: THREE.Vector3[] = [];
 
         faces.forEach(face => {
             convertedVertices.push(vertices[face[0]][0]);
@@ -388,7 +416,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             let wheelForce;
 
             if (currentSpeed > maxSpeed) {
-                wheelForce = - ((currentSpeed - maxSpeed) * (currentSpeed - maxSpeed)) * 1.5 * wheelMass + this.bodyMass * 2 / (1 + (200 / wheelMass) + maxSpeed * maxSpeed) + 2.5 * wheelMass * (-maxSpeed + 20 + maxSpeed);
+                wheelForce = -((currentSpeed - maxSpeed) * (currentSpeed - maxSpeed)) * 1.5 * wheelMass + this.bodyMass * 2 / (1 + (200 / wheelMass) + maxSpeed * maxSpeed) + 2.5 * wheelMass * (-maxSpeed + 20 + maxSpeed);
             } else {
                 wheelForce = this.bodyMass * 2 / (1 + (200 / wheelMass) + currentSpeed * currentSpeed) + 2.5 * wheelMass * (-currentSpeed + 20 + maxSpeed);
             }
@@ -406,8 +434,9 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             wheelForce = wheel.canSteer ? wheelForce * 0.7 : wheelForce;
 
             if (isNaN(wheelForce)) {
-                console.log("An Error has occured while simulating a vehicle!")
-                console.log(this);
+                console.log("An Error has occured while simulating a vehicle. The corresponding VehicleGen follows:")
+                let temp = toSplitArray(this.vehicleGen);
+                console.log(temp[0] + '|' + temp[1]);
                 carIsFine = false;
             } else {
                 this.applyWheelForce(wheelForce, i);
@@ -418,7 +447,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
     private moveBodyCOMTo0AndUpdateLowestPoint(bodyVector: CANNON.Vec3[], com: CANNON.Vec3) {
         let centerBodyVectors: CANNON.Vec3[] = [];
-        bodyVector.forEach((vector , i)=> {
+        bodyVector.forEach((vector, i) => {
             centerBodyVectors.push(vector.vsub(com));
             if (this.lowestPoint > centerBodyVectors[i].y) {
                 this.lowestPoint = centerBodyVectors[i].y;
@@ -428,9 +457,38 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     }
 
     private adjustPosition() {
-        this.chassisBody.position.set(0,-this.lowestPoint + 1,0);
+        this.chassisBody.position.set(0, -this.lowestPoint + 1.5, 0);
         this.wheelBodies.forEach(wheel => {
-            wheel.position.y += -this.lowestPoint + 1;
+            wheel.position.y += -this.lowestPoint + 1.5;
         })
+    }
+
+    /**
+     * Call this function after the body has been initialized to calculate the connectionpoint between the given vector
+     * and the body.
+     * @private
+     * @param x
+     * @param y
+     * @param z
+     */
+    private getCorrectWheelPosition(x: number, y: number , z: number): CANNON.Vec3 {
+        let closest = new CANNON.Vec3(100,100,100);
+        this.chassisBody.shapes.forEach(shape => {
+            if (shape instanceof CANNON.ConvexPolyhedron) {
+                let planeN = shape.faceNormals[0];
+                let planeP = shape.vertices[0];
+
+                let point = intersectLineAndPlane([0,0,0], [x, y, z],
+                    [planeP.x, planeP.y, planeP.z],[planeN.x, planeN.y, planeN.z]);
+                if (point) {
+                    let vec = new CANNON.Vec3(point[0], point[1], point[2]);
+                    if (closest.length() > vec.length()) {
+                        closest = vec;
+                    }
+                }
+            }
+        })
+
+        return closest;
     }
 }

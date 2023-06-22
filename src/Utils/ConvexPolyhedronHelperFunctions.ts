@@ -1,8 +1,8 @@
 import * as CANNON from "cannon-es";
 
-export function getVolumeAndCentreOfMass(vertices: number[][], faces: number[][]) : [number, CANNON.Vec3] {
+export function getVolumeAndCentreOfMass(vertices: number[][], faces: number[][]): [number, CANNON.Vec3] {
     const mult: number[] = [1 / 6, 1 / 24, 1 / 24, 1 / 24, 1 / 60, 1 / 60, 1 / 60, 1 / 120, 1 / 120, 1 / 120];
-    let intg: number[] = [0, 0, 0, 0, 0, 0, 0 ,0 ,0, 0];
+    let intg: number[] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
     for (let i = 0; i < faces.length; i++) {
         let i0 = faces[i][0];
@@ -52,11 +52,11 @@ export function getVolumeAndCentreOfMass(vertices: number[][], faces: number[][]
         intg[9] += d2 * (x0 * subExpZ[3] + x1 * subExpZ[4] + x2 * subExpZ[5]);
     }
 
-    for ( let j = 0; j < 10; j++) {
+    for (let j = 0; j < 10; j++) {
         intg[j] = intg[j] * mult[j];
     }
 
-    return [intg[0], new CANNON.Vec3(intg[1]/intg[0], intg[2]/intg[0], intg[3]/intg[0])];
+    return [intg[0], new CANNON.Vec3(intg[1] / intg[0], intg[2] / intg[0], intg[3] / intg[0])];
 }
 
 function subExpressions(x0: number, x1: number, x2: number): [number, number, number, number, number, number] {
@@ -73,4 +73,45 @@ function subExpressions(x0: number, x1: number, x2: number): [number, number, nu
     let g2 = f2 + x2 * (f1 + x2);
 
     return [f1, f2, f3, g0, g1, g2]
+}
+
+
+//https://stackoverflow.com/questions/5666222/3d-line-plane-intersection
+export function intersectLineAndPlane(p0, p1, planeP, planeN) {
+    let u = sub(p1, p0); //normally u = p1 since p0 = (0,0,0)
+
+    let dotProd = dot(planeN, u);
+    if (Math.abs(dotProd) > 1e-6) {
+        let w = sub(p0, planeP);
+        let fac = - dot(planeN, w) / dotProd;
+        if (fac < 0) {
+            return undefined;
+        } else {
+            //0 < fac
+            u = scale(u, fac);
+            return add(p0, u);
+        }
+    } else {
+        return undefined;
+    }
+}
+
+function sub(v0, v1) {
+    return [v0[0] - v1[0], v0[1] - v1[1], v0[2] - v1[2]];
+};
+
+function add(v0, v1) {
+    return [v0[0] + v1[0], v0[1] + v1[1], v0[2] + v1[2]];
+};
+
+function dot(v0, v1) {
+    return (v0[0] * v1[0]) + (v0[1] * v1[1]) + (v0[2] * v1[2]);
+};
+
+function lenSquared(v0) {
+    return dot(v0, v0);
+};
+
+function scale(v0, f) {
+    return[v0[0] * f, v0[1] * f, v0[2] * f];
 }

@@ -73,7 +73,7 @@ export class DataStore {
             x: currentGen,
             fitnessData: {
                 distanceTraveled: median.distanceTraveled / size,
-                hasFinished: median.hasFinished / size,
+                hasFinished: 0,
                 timeInSteps: median.timeInSteps / size,
                 fitness: median.fitness / size
             }
@@ -88,8 +88,8 @@ export class DataStore {
     }
 
     newChart() {
-        this.chart = new Chart(
-            document.getElementById('fitnessChart'),
+        this.chart = new Chart(// @ts-ignore
+            document.getElementById('fitnessChart')!,
             {
                 type: 'line',
                 options: {
@@ -122,6 +122,7 @@ export class DataStore {
                                     }
                                 },
                                 afterLabel: function (context) {
+                                    // @ts-ignore
                                     let data = context.dataset.data[context.dataIndex].fitnessData;
                                     let string = `Distance traveled: ${roundToFour(data.distanceTraveled)} meters.`;
                                     if (data.hasFinished) {

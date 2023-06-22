@@ -15,7 +15,6 @@ export function toSplitArray(vehicleGen: vehicleGenome): number[][] {
 
     let wheelAsArray: number[] = [];
     vehicleGen.wheels.forEach(wheel => {
-        wheelAsArray.push(wheel.canSteer ? 1 : 0)
         wheelAsArray.push(wheel.radius);
         wheelAsArray.push(wheel.width);
         wheelAsArray.push(wheel.density);
@@ -23,6 +22,7 @@ export function toSplitArray(vehicleGen: vehicleGenome): number[][] {
         wheelAsArray.push(wheel.posX);
         wheelAsArray.push(wheel.posY);
         wheelAsArray.push(wheel.posZ);
+        wheelAsArray.push(wheel.canSteer ? 1 : 0);
     })
 
     return [bodyAsArray, wheelAsArray];
@@ -32,11 +32,13 @@ export function toSplitArray(vehicleGen: vehicleGenome): number[][] {
  * Returns the vehicle genome as an Array for the crossover and mutation process.
  */
 export function toGenome(vehicleGen: number[], amountOfBodyVectors: number): vehicleGenome {
-    let bodyVectors = [];
+    let bodyVectors: CANNON.Vec3[] = [];
     let wheels: wheel[] = [];
     let counter = 0;
 
-    //TODO insert error here if mod 3 != 0
+    if (amountOfBodyVectors % 3 != 0) {
+        console.log("incorrect amount of Bodyvectors");
+    }
 
     while (counter < amountOfBodyVectors) {
         bodyVectors.push(new CANNON.Vec3(vehicleGen[counter], vehicleGen[counter + 1], vehicleGen[counter + 2]));
@@ -44,16 +46,20 @@ export function toGenome(vehicleGen: number[], amountOfBodyVectors: number): veh
     }
 
     //TODO insert error here if mod 7 != 0
+    if ((vehicleGen.length - counter) % 8 != 0) {
+        console.log("Bug occurred during the crossover");
+    }
+
     while (counter < vehicleGen.length) {
         let wheel: wheel = {
-            canSteer: vehicleGen[counter] === 1,
-            radius: vehicleGen[counter + 1],
-            width: vehicleGen[counter + 2],
-            density: vehicleGen[counter + 3],
-            stiffness: vehicleGen[counter + 4],
-            posX: vehicleGen[counter + 5],
-            posY: vehicleGen[counter + 6],
-            posZ: vehicleGen[counter + 7]
+            radius: vehicleGen[counter],
+            width: vehicleGen[counter + 1],
+            density: vehicleGen[counter + 2],
+            stiffness: vehicleGen[counter + 3],
+            posX: vehicleGen[counter + 4],
+            posY: vehicleGen[counter + 5],
+            posZ: vehicleGen[counter + 6],
+            canSteer: vehicleGen[counter + 7] === 1,
         };
         wheels.push(wheel);
         counter = counter + 8;

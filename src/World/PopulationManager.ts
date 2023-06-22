@@ -5,7 +5,7 @@ import {calculateFitness} from "../GeneticAlgorithm/FitnessFunction";
 
 export type fitnessData = {
     id: number,
-    oldVehicleGen?: vehicleGenome,
+    oldVehicleGen: vehicleGenome,
     distanceTraveled: number,
     hasFinished: boolean,
     timeInSteps: number,

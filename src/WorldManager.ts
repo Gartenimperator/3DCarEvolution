@@ -10,16 +10,17 @@ export class WorldManager {
     populationStore: Map<number, vehicleGenome[]> = new Map();
     currentGen: number = 1;
     worldIdCounter: number = 0;
-    worldAmount: number;
+    worldAmount: number = 0;
 
-    batchSize: number;
-    batchAmount: number;
+    batchSize: number = 0;
+    batchAmount: number = 0;
 
-    lastBatchSize: number;
-    lastBatchAmount: number;
+    lastBatchSize: number = 0;
+    lastBatchAmount: number = 0;
 
     currentBatch: number = -1;
     worldCounter: number = 1;
+    // @ts-ignore
     currentWorld: ExtendedWorld;
     currentPopulationManager: PopulationManager;
 
@@ -39,13 +40,12 @@ export class WorldManager {
          worldOptions,
          gravity,
          groundBodyContactMaterialOptions,
-         fastForward,
-         batchSize,
-         amountOfBatches,
+         fastForward: boolean,
+         batchSize: number,
+         amountOfBatches: number,
+         useRealisticWheels: boolean,
          userVehicle: vehicleGenome | undefined
     ) {
-        this.currentWorld?.cleanUpCurrentGeneration(true);
-
         if (this.currentBatch < this.batchAmount) {
             this.currentBatch++;
         } else {
@@ -69,21 +69,22 @@ export class WorldManager {
         let population = this.populationStore.get(this.worldCounter)?.slice(this.lastBatchSize * this.currentBatch, this.lastBatchSize * this.currentBatch + this.lastBatchSize);
         population = population ? population : [];
 
-        if (userVehicle != undefined) {
+        if (userVehicle) {
             population.pop();
             population.push(userVehicle);
         }
-
         this.currentWorld = new ExtendedWorld(
             fastForward ? undefined : scene,
             worldOptions,
             gravity,
             groundBodyContactMaterialOptions,
+            useRealisticWheels,
             this.worldIdCounter++,
             population,
             this.currentPopulationManager,
             !fastForward
         );
+
         return this.currentWorld;
     }
 
