@@ -1,6 +1,7 @@
 import {vehicleGenome} from "../World/ExtendedWorld";
 import {createRandomBodyVector, createRandomWheel} from "../VehicleModel/VehicleGeneration";
 import {vehGenConstants} from "../VehicleModel/VehicleGenerationConstants";
+import {random} from "../Utils/MathHelper";
 
 export function mutate(vehicleGen: vehicleGenome, mutationRate: number): vehicleGenome {
     
@@ -8,42 +9,42 @@ export function mutate(vehicleGen: vehicleGenome, mutationRate: number): vehicle
         return Math.random() < mutationRate;
     }
 
-    let maxMutationValue = 1;
+    let maxMutationValue = 2;
     //increase/decrease random vector variable by up to 1 Meter.
     vehicleGen.bodyVectors.forEach(vector => {
         if (mutate()) {
-            vector.x = vector.x + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutationValue;
+            vector.x = vector.x + random(-1, 1) * maxMutationValue;
         }
         if (mutate()) {
-            vector.y = vector.y + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutationValue;
+            vector.y = vector.y + random(-1, 1) * maxMutationValue;
         }
         if (mutate()) {
-            vector.z = vector.z + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutationValue;
+            vector.z = vector.z + random(-1, 1) * maxMutationValue;
         }
     })
 
     //increase/decrease random vector variable by up to 50 centimeters.
     vehicleGen.wheels.forEach(wheel => {
         if (mutate()) {
-            wheel.radius = Math.max(vehGenConstants.minimalRadius, wheel.radius + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutationValue / 2);
+            wheel.radius = Math.max(vehGenConstants.minimalRadius, wheel.radius + random(-1, 1) * maxMutationValue / 2);
         }
         if (mutate()) {
-            wheel.density = Math.min(vehGenConstants.minDensity + vehGenConstants.maxDensityDiff, Math.max(vehGenConstants.minDensity, wheel.density + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutationValue / 0.5));
+            wheel.density = Math.min(vehGenConstants.maxDensity, Math.max(vehGenConstants.minDensity, wheel.density + random(-1, 1) * maxMutationValue / 0.5));
         }
         if (mutate()) {
-            wheel.width = Math.max(vehGenConstants.minimalWidth, wheel.width + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutationValue / 2);
+            wheel.width = Math.max(vehGenConstants.minimalWidth, wheel.width + random(-1, 1) * maxMutationValue / 2);
         }
         if (mutate()) {
             wheel.stiffness = Math.random();
         }
         if (mutate()) {
-            wheel.posX = wheel.posX + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutationValue * 2;
+            wheel.posX = random(-1, 1);
         }
         if (mutate()) {
-            wheel.posY = wheel.posY + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutationValue * 2;
+            wheel.posY = random(-1, 1);
         }
         if (mutate()) {
-            wheel.posZ = wheel.posZ + (Math.floor((Math.random() * 2)) === 0 ? -1 : 1) * Math.random() * maxMutationValue * 2;
+            wheel.posZ = random(-1, 1);
         }
         if (mutate()) {
             wheel.canSteer = !wheel.canSteer;

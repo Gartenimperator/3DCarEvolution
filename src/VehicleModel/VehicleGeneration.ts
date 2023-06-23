@@ -1,6 +1,7 @@
 import * as CANNON from "cannon-es";
 import {vehicleGenome, wheel} from "../World/ExtendedWorld";
 import {vehGenConstants} from "./VehicleGenerationConstants";
+import {random} from "../Utils/MathHelper";
 
 
 /**
@@ -16,7 +17,7 @@ export function createRandomCar(): vehicleGenome {
     };
 
     //Minimum 4 vectors.
-    let bodyVectorAmount = vehGenConstants.minimumBodyVectors + Math.floor(Math.random() * vehGenConstants.maximumAdditionalBodyVectors);
+    let bodyVectorAmount = Math.floor(random(vehGenConstants.minimumBodyVectors, vehGenConstants.maximumBodyVectors));
 
     for (let i = 0; i < bodyVectorAmount; i++) {
         vehicle.bodyVectors.push(createRandomBodyVector());
@@ -33,24 +34,23 @@ export function createRandomCar(): vehicleGenome {
 
 export function createRandomWheel(): wheel {
     return {
-        radius: (roundToFour(vehGenConstants.minimalRadius + Math.random() * vehGenConstants.maximalRadius)),
-        width: (roundToFour(vehGenConstants.minimalWidth + Math.random() * vehGenConstants.maximalWidth)),
+        radius: random(vehGenConstants.minimalRadius, vehGenConstants.maximalRadius),
+        width: random(vehGenConstants.minimalWidth, vehGenConstants.maximalWidth),
 
-        //Try to generate wheels which are touching the car
-        posX: roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * vehGenConstants.maxWheelPosition), //wheel position length
-        posY: roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * vehGenConstants.maxWheelPosition), //wheel position height
-        posZ: roundToFour((Math.floor((Math.random() * 2))) === 0 ? -1 : 1) * (Math.random() * vehGenConstants.maxWheelPosition), //wheel position width
+        posX: random(-1, 1), //wheel position length
+        posY: random(-1, 1), //wheel position height
+        posZ: random(-1, 1), //wheel position width
 
         stiffness: Math.random(),
-        density: Math.random() * vehGenConstants.maxDensityDiff + vehGenConstants.minDensity,
+        density: random(vehGenConstants.maxDensity, vehGenConstants.minDensity),
         canSteer: Math.floor(Math.random() * 2) === 1,
     };
 }
 
 export function createRandomBodyVector(): CANNON.Vec3 {
-    let x = roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * vehGenConstants.maxBodyVectorLength));
-    let y = roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * vehGenConstants.maxBodyVectorLength));
-    let z = roundToFour((Math.floor(Math.random() * 2) === 0 ? -1 : 1) * (Math.random() * vehGenConstants.maxBodyVectorLength));
+    let x = random(-vehGenConstants.maxBodyVectorLength, vehGenConstants.maxBodyVectorLength);
+    let y = random(-vehGenConstants.maxBodyVectorLength, vehGenConstants.maxBodyVectorLength);
+    let z = random(-vehGenConstants.maxBodyVectorLength, vehGenConstants.maxBodyVectorLength);
     return new CANNON.Vec3(x, y, z);
 }
 

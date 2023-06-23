@@ -4,7 +4,7 @@ import CannonDebugger from "cannon-es-debugger";
 import {ExtendedRigidVehicle} from "./ExtendedRigidVehicle";
 import {PopulationManager} from "./PopulationManager";
 import {Groups} from "../Utils/Groups";
-import {Mesh, Object3D} from "three";
+import {Mesh} from "three";
 import * as THREE from "three";
 import {createRandomCar} from "../VehicleModel/VehicleGeneration";
 
@@ -87,6 +87,7 @@ export class ExtendedWorld extends World {
      * @param options
      * @param gravity
      * @param groundBodyContactMaterialOptions
+     * @param useRealisticWheels
      * @param id
      * @param population
      * @param populationManager
@@ -307,10 +308,10 @@ export class ExtendedWorld extends World {
         this.defaultContactMaterial.friction = 1;
 
         let wheelGroundOptions = {
-            friction: 0.4,
-            restitution: 0.3,
+            friction: 0.5,
+            restitution: 0.1,
             contactEquationRelaxation: 3,
-            frictionEquationStiffness: 1e8
+            frictionEquationStiffness: 1000
         };
 
         wheelGroundOptions.friction = 0.2;

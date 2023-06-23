@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module';
-import {ExtendedWorld, vehicleGenome, wheel} from "./World/ExtendedWorld";
+import {ExtendedWorld, vehicleGenome} from "./World/ExtendedWorld";
 import {WorldManager} from "./WorldManager";
 import {RainBowColor} from "./Utils/ColorCoder";
 import {vehGenConstants} from "./VehicleModel/VehicleGenerationConstants";
@@ -25,19 +25,17 @@ let materialDynamic, materialStatic;
 let currentWorld: ExtendedWorld;
 let groundBodyContactMaterialOptions = {
     friction: 0.8,
-    restitution: 0.3,
+    restitution: 0.1,
     contactEquationRelaxation: 3,
-    frictionEquationStiffness: 1e8
+    frictionEquationStiffness: 1000
 };
 let worldOptions = {
     allowSleep: true,
-    quatNormalizeFast: false,
+    quatNormalizeFast: true,
     quatNormalizeSkip: 1
 };
 let gravity: number[] = [0, -9.82, 0];
 const frameTime: number = 1 / 60;
-const fastForwardFrameTime: number = 1 / 20;
-const delta: number = 1; //???
 
 //Track gradient arrays
 let steps: number[] = [
@@ -45,6 +43,8 @@ let steps: number[] = [
     0, -90, -90, -90, -90, 0, 0, -90, -90, -90, -90, 0, 0, -90, -90, -90, -90, 0, 0, -90, -90, -90,
     -90, 0, 0, -90
 ];
+
+let jump: number[] = [0,0,0,0,0,0,0,0,5,5,10,10,15,15,20,20,25,25,30,35,35,40,40,45,-90,-90,-90,-90,0,0,0,0,0,0,0,90,90,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
 
 let nowWorking: number[] = [0, 10, 0, 0, 45, -45, -90, 180, -90, 0, 0, 0, 0, -110, -45, 0, -30, -20, 0, 10, 10];
 let example: number[] = [0, 20, 90, 180, -90, -90, -150, 0, 0, 0];
@@ -382,13 +382,6 @@ vehicleInputBtn.addEventListener('click', parseInputVehicle);
  * Init Functions
  */
 
-function resetGraphics() {
-    renderer?.dispose();
-    scene?.clear();
-    renderer = null;
-    scene = null;
-}
-
 function initGraphics() {
 
     renderer?.dispose();
@@ -509,15 +502,11 @@ function render() {
 for (var i = 0; i <= 50; i++) {
     let temp = document.createElement('span')!;
     temp.innerHTML = '&#9608;';
-    temp.style.color = RainBowColor(vehGenConstants.minDensity + i / 50, vehGenConstants.minDensity + vehGenConstants.maxDensityDiff);
+    temp.style.color = RainBowColor(vehGenConstants.minDensity + i / 50, vehGenConstants.maxDensity);
     document.getElementById('color')!.append(temp);
 }
 
 vehicleInput.value = vehicleInputExample;
-var worker = new Worker('World.js');
-worker.postMessage({
-    cannonUrl: document.location.href.replace(/\/[^/]*$/, "/") + "../build/cannon.js"
-})
 
 startSimulation();
 render();

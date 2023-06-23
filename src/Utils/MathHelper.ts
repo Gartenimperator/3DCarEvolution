@@ -98,20 +98,20 @@ export function intersectLineAndPlane(p0, p1, planeP, planeN) {
 
 function sub(v0, v1) {
     return [v0[0] - v1[0], v0[1] - v1[1], v0[2] - v1[2]];
-};
+}
 
 function add(v0, v1) {
     return [v0[0] + v1[0], v0[1] + v1[1], v0[2] + v1[2]];
-};
+}
 
 function dot(v0, v1) {
     return (v0[0] * v1[0]) + (v0[1] * v1[1]) + (v0[2] * v1[2]);
-};
-
-function lenSquared(v0) {
-    return dot(v0, v0);
-};
+}
 
 function scale(v0, f) {
     return[v0[0] * f, v0[1] * f, v0[2] * f];
+}
+
+export function random(min, max) {
+    return Math.random() * (max - min) + min;
 }

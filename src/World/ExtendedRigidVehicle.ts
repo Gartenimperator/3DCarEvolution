@@ -7,7 +7,7 @@ import {vehicleGenome, wheel} from "./ExtendedWorld";
 import qh from 'quickhull3d';
 import {vehGenConstants} from "../VehicleModel/VehicleGenerationConstants";
 import {RainBowColor} from "../Utils/ColorCoder";
-import {getVolumeAndCentreOfMass, intersectLineAndPlane} from "../Utils/ConvexPolyhedronHelperFunctions";
+import {getVolumeAndCentreOfMass, intersectLineAndPlane} from "../Utils/MathHelper";
 import {toNumberArray, toSplitArray} from "../Utils/VehicleGenArrayHelper";
 
 /**
@@ -111,6 +111,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * Creates a vehicle body in CANNON according to the passed parameters and stores the fitting visual representation in this.visualBody.
      * @param scene which the wheels will be added to, if it exists.
      * @param physicalWheelMaterial physicalMaterial of the wheel.
+     * @param useRealisticWheels
      * @private
      */
     private addWheels(physicalWheelMaterial: CANNON.Material | undefined, scene: THREE.Scene | undefined, useRealisticWheels: boolean) {
@@ -154,9 +155,9 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param positionZ
      * @param density of the wheel.
      * @param stiffness
-     * @param slowPcMode
      * @param physicalWheelMaterial of the wheel. If the param is undefined no physical CANNON.Body will be created.
      * @param canSteer defines if the wheel is steerable or not.
+     * @param useRealisticWheels
      * @param scene the wheel is placed inside of. If the param is undefined no visual THREE.Mesh will be created.
      */
     addWheelWithMesh(
@@ -194,6 +195,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param stiffness
      * @param physicalWheelMaterial of the wheel.
      * @param canSteer defines if the wheel is steerable or not.
+     * @param useRealisticWheels
      * @private
      */
     private addPhysicalWheel(radius: number,
@@ -207,7 +209,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                              canSteer: boolean,
                              useRealisticWheels: boolean) {
         let shape;
-        let wheelVolume = 0;
+        let wheelVolume;
 
         if (useRealisticWheels) {
             shape = new CANNON.Cylinder(radius, radius, width, 25);
@@ -242,7 +244,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             axis: new CANNON.Vec3(0, 0, -1)
         });
 
-        this.constraints[this.wheelBodies.length - 1].equations[1].setSpookParams(Math.max(4000, 10000 + 60000 * stiffness + wheelMass), 6, 1 / 60);
+        this.constraints[this.wheelBodies.length - 1].equations[1].setSpookParams(10000 + 60000 * stiffness + wheelMass, 6, 1 / 60);
 
         this.vehicleMass += wheelMass;
         this.wheelMass = this.wheelMass + wheelMass;
@@ -254,6 +256,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param width of the wheel.
      * @param density
      * @param scene the wheel is added to.
+     * @param useRealisticWheels
      */
     addWheelMesh(radius: number, width: number, density: number, scene: THREE.Scene, useRealisticWheels: boolean) {
         let wheelVisual;
@@ -271,7 +274,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             wheelHood.rotateY(Math.PI / 2);
 
             let wheelHoodMaterial = new THREE.MeshLambertMaterial();
-            wheelHoodMaterial.color = new THREE.Color(RainBowColor(density, vehGenConstants.minDensity + vehGenConstants.maxDensityDiff));
+            wheelHoodMaterial.color = new THREE.Color(RainBowColor(density, vehGenConstants.maxDensity));
             wheelMesh = new THREE.Mesh(wheelVisual, this.wheelMaterial);
             wheelMesh.add(new THREE.Mesh(wheelHood, wheelHoodMaterial));
             wheelMesh.add(new THREE.Mesh(new THREE.BoxGeometry(radius * 0.6, radius * 0.2, width + 0.15), this.wheelMaterial));
@@ -280,7 +283,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             wheelVisual = new THREE.SphereGeometry(radius);
 
             let wheelVisualMaterial = new THREE.MeshLambertMaterial();
-            wheelVisualMaterial.color = new THREE.Color(RainBowColor(density, vehGenConstants.minDensity + vehGenConstants.maxDensityDiff));
+            wheelVisualMaterial.color = new THREE.Color(RainBowColor(density, vehGenConstants.maxDensity));
             wheelMesh = new THREE.Mesh(wheelVisual, wheelVisualMaterial);
             wheelMesh.add(new THREE.Mesh(new THREE.BoxGeometry(radius * 2, radius * 0.15, radius * 0.15), this.wheelMaterial).rotateZ(90));
             wheelMesh.add(new THREE.Mesh(new THREE.BoxGeometry(radius * 2, radius * 0.15, radius * 0.15), this.wheelMaterial));
@@ -412,23 +415,11 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             let currentSpeed = this.wheelBodies[i].angularVelocity.length();
             let wheelMass = this.wheelBodies[i].mass;
 
-            let maxSpeed = 15;
-            let wheelForce;
+            let maxSpeed = 10;
+            let wheelForce = Math.max(0, -((currentSpeed - maxSpeed) * (currentSpeed - maxSpeed) * (currentSpeed - maxSpeed)) * wheelMass / 10 + 65 * wheelMass);
 
-            if (currentSpeed > maxSpeed) {
-                wheelForce = -((currentSpeed - maxSpeed) * (currentSpeed - maxSpeed)) * 1.5 * wheelMass + this.bodyMass * 2 / (1 + (200 / wheelMass) + maxSpeed * maxSpeed) + 2.5 * wheelMass * (-maxSpeed + 20 + maxSpeed);
-            } else {
-                wheelForce = this.bodyMass * 2 / (1 + (200 / wheelMass) + currentSpeed * currentSpeed) + 2.5 * wheelMass * (-currentSpeed + 20 + maxSpeed);
-            }
-
-            if (wheelMass < 15) {
-                wheelForce = wheelForce * 0.7;
-            }
-
-            if (wheelMass < this.bodyMass) {
-                wheelForce = wheelForce * (1 - wheelMass / this.bodyMass) * (1 - wheelMass / this.bodyMass);
-            } else {
-                wheelForce = wheelMass;
+            if (this.wheelMass > this.bodyMass) {
+                wheelForce = wheelForce * (1 - (1 + this.wheelMass)/this.vehicleMass);
             }
 
             wheelForce = wheel.canSteer ? wheelForce * 0.7 : wheelForce;
@@ -477,7 +468,6 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             if (shape instanceof CANNON.ConvexPolyhedron) {
                 let planeN = shape.faceNormals[0];
                 let planeP = shape.vertices[0];
-
                 let point = intersectLineAndPlane([0,0,0], [x, y, z],
                     [planeP.x, planeP.y, planeP.z],[planeN.x, planeN.y, planeN.z]);
                 if (point) {
