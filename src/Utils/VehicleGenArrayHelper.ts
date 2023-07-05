@@ -37,7 +37,7 @@ export function toGenome(vehicleGen: number[], amountOfBodyVectors: number): veh
     let counter = 0;
 
     if (amountOfBodyVectors % 3 != 0) {
-        console.log("incorrect amount of Bodyvectors");
+        console.log("Incorrect amount of Bodyvectors during the crossover");
     }
 
     while (counter < amountOfBodyVectors) {
@@ -45,9 +45,8 @@ export function toGenome(vehicleGen: number[], amountOfBodyVectors: number): veh
         counter = counter + 3;
     }
 
-    //TODO insert error here if mod 7 != 0
     if ((vehicleGen.length - counter) % 8 != 0) {
-        console.log("Bug occurred during the crossover");
+        console.log("Incorrect amount of Wheelvectors during the crossover");
     }
 
     while (counter < vehicleGen.length) {

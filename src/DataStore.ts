@@ -22,6 +22,7 @@ export class DataStore {
             hasFinished: false,
             timeInSteps: 0
         };
+        let amountOfFinisher = 0;
 
         this.chart.data.labels.push(currentGen);
 
@@ -55,6 +56,7 @@ export class DataStore {
                             },
                         }],
                         borderColor: 'lightblue',
+                        borderWidth: 2,
                         parsing: {
                             yAxisKey: 'fitnessData.fitness'
                         },
@@ -64,6 +66,9 @@ export class DataStore {
             median.fitness = median.fitness + data.fitness;
             median.distanceTraveled = median.distanceTraveled + data.distanceTraveled;
             median.timeInSteps = median.timeInSteps + data.timeInSteps;
+            if (data.hasFinished) {
+                amountOfFinisher++;
+            }
         });
 
         this.chart.update();
@@ -73,7 +78,7 @@ export class DataStore {
             x: currentGen,
             fitnessData: {
                 distanceTraveled: median.distanceTraveled / size,
-                hasFinished: 0,
+                hasFinished: (amountOfFinisher / size) > 0.5,
                 timeInSteps: median.timeInSteps / size,
                 fitness: median.fitness / size
             }
@@ -155,5 +160,31 @@ export class DataStore {
                 },
             }
         );
+    }
+
+    logData() {
+        let median: string = "";
+        let first: string = "";
+        let last: string = "";
+
+        //median
+        this.chart.data.datasets[0].data.forEach((data, i) => {
+            median += "(" + i + ", " + String(roundToFour(data.fitnessData.fitness)) + "), ";
+        })
+
+        //first
+        this.chart.data.datasets[1].data.forEach((data, i) => {
+            first += "(" + i + ", " + String(roundToFour(data.fitnessData.fitness)) + "), ";
+        })
+
+        // last
+        this.chart.data.datasets[this.chart.data.datasets.length - 1].data.forEach((data, i) => {
+            last += "(" + i + ", " + String(roundToFour(data.fitnessData.fitness)) + "), ";
+        })
+
+        console.log("Median: " + median);
+        console.log("First: " + first);
+        console.log("Last: " + last);
+        console.log("---");
     }
 }

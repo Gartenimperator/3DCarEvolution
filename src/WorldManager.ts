@@ -43,6 +43,7 @@ export class WorldManager {
          fastForward: boolean,
          batchSize: number,
          amountOfBatches: number,
+         mutationRate: number,
          useRealisticWheels: boolean,
          userVehicle: vehicleGenome | undefined
     ) {
@@ -50,7 +51,7 @@ export class WorldManager {
             this.currentBatch++;
         } else {
             this.dataStore.pushData(this.currentPopulationManager.fitnessData, this.currentGen);
-            this.populationStore.set(this.worldCounter, this.currentPopulationManager.createNextGeneration(0.05));
+            this.populationStore.set(this.worldCounter, this.currentPopulationManager.createNextGeneration(mutationRate));
             this.lastBatchSize = this.batchSize;
             this.lastBatchAmount = this.batchAmount;
             this.batchSize = batchSize;
@@ -73,6 +74,7 @@ export class WorldManager {
             population.pop();
             population.push(userVehicle);
         }
+
         this.currentWorld = new ExtendedWorld(
             fastForward ? undefined : scene,
             worldOptions,

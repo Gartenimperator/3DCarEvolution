@@ -235,16 +235,14 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         wheelBody.addShape(shape, new CANNON.Vec3(), rotateParallelToXAxis);
         wheelBody.angularDamping = 0.7;
 
-        //TODO Calc correct wheel pos here
-
-
         this.addWheel({
             body: wheelBody,
             position: this.getCorrectWheelPosition(positionX, positionY, positionZ),
             axis: new CANNON.Vec3(0, 0, -1)
         });
 
-        this.constraints[this.wheelBodies.length - 1].equations[1].setSpookParams(10000 + 60000 * stiffness + wheelMass, 6, 1 / 60);
+        //set Stiffness
+        this.constraints[this.wheelBodies.length - 1].equations[1].setSpookParams(1000000 + 10000000 * stiffness, 4, 1 / 60);
 
         this.vehicleMass += wheelMass;
         this.wheelMass = this.wheelMass + wheelMass;
@@ -441,7 +439,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         bodyVector.forEach((vector, i) => {
             centerBodyVectors.push(vector.vsub(com));
             if (this.lowestPoint > centerBodyVectors[i].y) {
-                this.lowestPoint = centerBodyVectors[i].y;
+                this.lowestPoint = centerBodyVectors[i].y - 0.1;
             }
         })
         return centerBodyVectors;

@@ -31,8 +31,8 @@ let groundBodyContactMaterialOptions = {
 };
 let worldOptions = {
     allowSleep: true,
-    quatNormalizeFast: true,
-    quatNormalizeSkip: 1
+    quatNormalizeFast: false,
+    quatNormalizeSkip: 0
 };
 let gravity: number[] = [0, -9.82, 0];
 const frameTime: number = 1 / 60;
@@ -64,8 +64,8 @@ let trackTexture: THREE.MeshStandardMaterial;
 //Genetic-Algorithm global variables
 let amountOfWorlds: number = 1;
 
-let batchSize: number = 1;
-let amountOfBatches: number = 5;
+let batchSize: number = 10;
+let amountOfBatches: number = 1;
 
 let mutationRate = 0.05;
 
@@ -124,18 +124,21 @@ let vehicleInputBtn = <HTMLButtonElement>document.getElementById('addVehicleBtn'
 let vehicleInputConfirmation = document.getElementById('vehicleInputConfirmation')!;
 let vehicleInputError = document.getElementById('vehicleInputError')!;
 
+let printDataBtn = <HTMLButtonElement>document.getElementById('printDataBtn')!;
+
 let infoText = document.getElementById('currentBatchInfo')!;
 
 /**
  * Input listeners
  */
 
-function updateButtons(disableStopBtn: boolean, disableContinueBtn: boolean, disableNewPopulationBtn: boolean, disableNextGenBtn: boolean, disableFFBtn: boolean) {
+function updateButtons(disableStopBtn: boolean, disableContinueBtn: boolean, disableNewPopulationBtn: boolean, disableNextGenBtn: boolean, disableFFBtn: boolean, disableRealisticWheels: boolean) {
     stopBtn.disabled = disableStopBtn;
     continueBtn.disabled = disableContinueBtn;
     newPopulationBtn.disabled = disableNewPopulationBtn;
     nextGenBtn.disabled = disableNextGenBtn;
     fastForwardBtn.disabled = disableFFBtn;
+    realisticWheelsCheckbox.disabled = disableRealisticWheels;
 }
 
 function next() {
@@ -143,7 +146,8 @@ function next() {
     if (!fastForward) {
         initGraphics();
     }
-    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions, fastForward, batchSize, amountOfBatches, !realisticWheelsCheckbox.checked, userVehicle);
+    console.log("here");
+    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions, fastForward, batchSize, amountOfBatches, mutationRate, !realisticWheelsCheckbox.checked, userVehicle);
     userVehicle = undefined;
     currentWorld.initTrackWithGradients(trackGradients, trackPieceLength, trackPieceWidth, trackTexture, scene);
     currentWorld.cameraFocus.add(camera);
@@ -182,7 +186,7 @@ function hideErrorMsgs() {
 
 function startSimulation() {
     simulateThisGeneration = true;
-    updateButtons(false, true, false, true, false);
+    updateButtons(false, true, false, true, false, false);
 
     next();
     resetInputFields();
@@ -190,7 +194,7 @@ function startSimulation() {
 
 function restartSimulation() {
     simulateThisGeneration = true;
-    updateButtons(false, true, false, true, false);
+    updateButtons(false, true, false, true, false, false);
     worldManager.reset(batchSize, amountOfBatches);
 
     next();
@@ -200,12 +204,12 @@ function restartSimulation() {
 function stopSimulation() {
     simulateThisGeneration = false;
     isPaused = true;
-    updateButtons(true, false, false, false, false);
+    updateButtons(true, false, false, false, false, false);
 }
 
 function continueSimulation() {
     simulateThisGeneration = true;
-    updateButtons(false, true, false, true, false);
+    updateButtons(false, true, false, true, false, false);
 }
 
 function simulateNext() {
@@ -216,7 +220,7 @@ function simulateNext() {
     } else {
         fastForward = false;
         simulateThisGeneration = true;
-        updateButtons(false, true, false, true, false);
+        updateButtons(false, true, false, true, false, false);
         resetInputFields();
     }
     next();
@@ -230,7 +234,7 @@ function roundToFive(num: number) {
 function fastForwardFct() {
     let amount = parseInt(fastForwardInput.value);
     if (amount > 0) {
-        updateButtons(true, true, true, true, true);
+        updateButtons(true, true, true, true, true, true);
         fastForwardCounter = amount;
         autoRunCheckbox.checked = true;
         autoRunCheckbox.disabled = true;
@@ -370,6 +374,10 @@ function updateVariables() {
     }
 }
 
+function logData() {
+    worldManager.dataStore.logData();
+}
+
 fastForwardBtn.addEventListener('click', fastForwardFct);
 nextGenBtn.addEventListener("click", simulateNext);
 stopBtn.addEventListener("click", stopSimulation);
@@ -377,6 +385,7 @@ continueBtn.addEventListener("click", continueSimulation);
 newPopulationBtn.addEventListener("click", restartSimulation);
 updateVariablesBtn.addEventListener('click', updateVariables);
 vehicleInputBtn.addEventListener('click', parseInputVehicle);
+printDataBtn.addEventListener('click', logData);
 
 /**
  * Init Functions

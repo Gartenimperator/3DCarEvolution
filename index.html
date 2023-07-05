@@ -10,65 +10,74 @@
 <div class="wrapper">
     <div id="simulationWindow"></div>
 </div>
-<span id="currentBatchInfo"></span>
-<br />
-<button id="startSimulationBtn">New Population!</button>
-<button id="stopBtn">Stop</button>
-<button id="continueBtn">Continue</button>
-<button id="nextGenerationBtn">Simulate next batch</button>
-<input id="autoRunCheckbox" type="checkbox"/>
-<label for="autoRunCheckbox">Don't stop, keep evolving!</label>
-<input id="realisticWheelsCheckbox" type="checkbox"/>
-<label for="realisticWheelsCheckbox">Use Spheres as wheels to increase performance.</label>
-<br />
-<label for="fastForward">Fast forward the set amount of Batches: </label>
-<input id="fastForward"/>
-<button id="fastForwardBtn">FastForward</button>
-<br />
-<label for="batchSize">Batch size: </label>
-<input id="batchSize"/>
-<span style="color: red" id="batchSizeInputError" hidden="true"> Please enter a number larger than Zero.</span>
-<label for="amountOfBatches">Amount of batches per world: </label>
-<input id="amountOfBatches"/>
-<span style="color: red" id="amountOfBatchesInputError" hidden="true"> Please enter a number larger than Zero.</span>
-<br />
-<label for="gravity">Gravity: </label>
-<input id="gravity"/>
-<span style="color: red" id="gravityInputError" hidden="true"> Please enter a 3 dimensional vector in the form of "x, y, z" where x, y, z may be from [-100, 100] in the form xx.xxxxx.</span>
-<br />
-<label for="timeout">Timeout in Steps: </label>
-<input id="timeout"/>
-<span style="color: red" id="timeoutInputError" hidden="true"> Please enter a number larger than Zero.</span>
-<br />
-<label for="mutationRate">Mutation rate: </label>
-<input id="mutationRate"/>
-<span style="color: red" id="mutationRateInputError" hidden="true"> Please enter a number between 0 and 1.</span>
-<br />
-<label for="trackGradients">Track Gradients: </label>
-<input id="trackGradients" style="width: 100%"/>
-<span style="color: red" id="trackGradientsInputError" hidden="true"> Please enter a multidimensional vector in the form of "a, b, [...], z" where a, b, [...], z may be whole numbers from [-180, 180].</span>
-</span>
-<br />
-<label for="trackPieceLengthX">Trackpiece length: </label>
-<input id="trackPieceLengthX"/>
-<span style="color: red" id="trackPieceLengthXInputError" hidden="true"> Please enter a number larger than Zero.</span>
-</span>
-<br />
-<button id="updateVariables">Update Values for the next generation</button>
-<span id="variablesInputConfirmation" hidden="true">Updating values for the next Generation.</span>
-<br /><br />
-<label for="vehicleInput">Input your own vehicle: </label>
-<input id="vehicleInput" style="width: 100%"/>
-<span style="color: red" id="vehicleInputError" hidden="true"> Something was wrong with the input.</span>
-<span id="vehicleInputConfirmation" hidden="true">Updating values for the next Generation.</span>
-</span>
-<br />
-<button id="addVehicleBtn">Add vehicle to the next batch</button>
-<br />
+<div>
+    <span id="currentBatchInfo"></span>
+    <br/>
+    <button id="startSimulationBtn">New Population!</button>
+    <button id="stopBtn">Stop</button>
+    <button id="continueBtn">Continue</button>
+    <button id="nextGenerationBtn">Simulate next batch</button>
+    <input id="autoRunCheckbox" type="checkbox"/>
+    <label for="autoRunCheckbox">Don't stop, keep evolving!</label>
+    <input id="realisticWheelsCheckbox" type="checkbox"/>
+    <label for="realisticWheelsCheckbox">Use Spheres as wheels to increase performance.</label>
+    <br/>
+    <label for="fastForward">Fast forward the set amount of Batches: </label>
+    <input id="fastForward"/>
+    <button id="fastForwardBtn">FastForward</button>
+    <br/>
+    <label for="batchSize">Batch size: </label>
+    <input id="batchSize"/>
+    <span style="color: red" id="batchSizeInputError" hidden="true"> Please enter a number larger than Zero.</span>
+    <label for="amountOfBatches">Amount of batches per world: </label>
+    <input id="amountOfBatches"/>
+    <span style="color: red" id="amountOfBatchesInputError"
+          hidden="true"> Please enter a number larger than Zero.</span>
+    <br/>
+    <label for="gravity">Gravity: </label>
+    <input id="gravity"/>
+    <span style="color: red" id="gravityInputError" hidden="true"> Please enter a 3 dimensional vector in the form of "x, y, z" where x, y, z may be from [-100, 100] in the form xx.xxxxx.</span>
+    <br/>
+    <label for="timeout">Timeout in Steps: </label>
+    <input id="timeout"/>
+    <span style="color: red" id="timeoutInputError" hidden="true"> Please enter a number larger than Zero.</span>
+    <br/>
+    <label for="mutationRate">Mutation rate: </label>
+    <input id="mutationRate"/>
+    <span style="color: red" id="mutationRateInputError" hidden="true"> Please enter a number between 0 and 1.</span>
+    <br/>
+    <label for="trackGradients">Track Gradients: </label>
+    <input id="trackGradients" style="width: 100%"/>
+    <span style="color: red" id="trackGradientsInputError" hidden="true"> Please enter a multidimensional vector in the form of "a, b, [...], z" where a, b, [...], z may be whole numbers from [-180, 180].</span>
+    </span>
+    <br/>
+    <label for="trackPieceLengthX">Trackpiece length: </label>
+    <input id="trackPieceLengthX"/>
+    <span style="color: red" id="trackPieceLengthXInputError"
+          hidden="true"> Please enter a number larger than Zero.</span>
+    </span>
+    <br/>
+    <button id="updateVariables">Update Values for the next generation</button>
+    <span id="variablesInputConfirmation" hidden="true">Updating values for the next Generation.</span>
+    <br/><br/>
+    <label for="vehicleInput">Input your own vehicle: </label>
+    <input id="vehicleInput" style="width: 100%"/>
+    <span style="color: red" id="vehicleInputError" hidden="true"> Something was wrong with the input.</span>
+    <span id="vehicleInputConfirmation" hidden="true">Updating values for the next Generation.</span>
+    </span>
+    <br/>
+    <button id="addVehicleBtn">Add vehicle to the next batch</button>
+    <br/>
+</div>
 
 <span id="color"></span>
 
-<div style="width: 1500px;"><canvas id="fitnessChart"></canvas></div>
+<div style="width: 1500px;">
+    <canvas id="fitnessChart"></canvas>
+</div>
+<div>
+    <button id="printDataBtn">ConsolePrintData</button>
+</div>
 
 <script type="module" src="src/index.ts"></script>
 </body>

@@ -11,5 +11,5 @@
  */
 export function calculateFitness(stepNumber: number, hasFinished: boolean, distance: number, vehicleMass, wheelMass): number {
     let adjustment = 1 - (1 + wheelMass)/vehicleMass;
-    return hasFinished ? (distance + distance * 1000 / stepNumber) * adjustment: distance;
+    return hasFinished ? (distance + distance * 1000 / stepNumber) * adjustment : distance;
 }
