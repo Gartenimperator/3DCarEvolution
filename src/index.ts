@@ -146,7 +146,7 @@ function next() {
     if (!fastForward) {
         initGraphics();
     }
-    console.log("here");
+
     currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions, fastForward, batchSize, amountOfBatches, mutationRate, !realisticWheelsCheckbox.checked, userVehicle);
     userVehicle = undefined;
     currentWorld.initTrackWithGradients(trackGradients, trackPieceLength, trackPieceWidth, trackTexture, scene);
