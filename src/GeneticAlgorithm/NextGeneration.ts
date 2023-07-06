@@ -3,6 +3,7 @@ import {twoPartCrossOver} from "./CrossOver";
 import {fitnessData} from "../World/PopulationManager";
 import {mutate} from "./Mutate";
 import {oneRoundTournamentSelection} from "./Selection";
+import {toSplitArray} from "../Utils/VehicleGenArrayHelper";
 
 export function createNextGeneration(mutationRate: number, fitnessData: fitnessData[]): vehicleGenome[] {
     let newGeneration: vehicleGenome[] = [];
@@ -20,9 +21,13 @@ export function createNextGeneration(mutationRate: number, fitnessData: fitnessD
             }
         }
 
-        //Crossover Json.parse(Json.stringify(obj)) creates deep copy of the vehicleGen
-        //This is only needed due to the one Elite else the elite might be changed
-        let children = twoPartCrossOver(JSON.parse(JSON.stringify(parent1.oldVehicleGen)), JSON.parse(JSON.stringify(parent2.oldVehicleGen)));
+        //Json.parse(Json.stringify(obj)) creates deep copy of the vehicleGen
+        //This is needed due to the one Elite else the elite might be changed
+        let vehGen1 = JSON.parse(JSON.stringify(parent1.oldVehicleGen));
+        let vehGen2 = JSON.parse(JSON.stringify(parent2.oldVehicleGen));
+
+        //Crossover
+        let children = twoPartCrossOver(vehGen1, vehGen2);
 
         //Mutation
         newGeneration.push(mutate(children[0], mutationRate));

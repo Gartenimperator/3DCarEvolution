@@ -1,6 +1,7 @@
 {
   "devDependencies": {
     "@types/three": "^0.149.0",
+    "copyfiles": "^2.4.1",
     "typescript": "^5.0.4",
     "vite": "^4.2.1"
   },
@@ -10,5 +11,9 @@
     "chart.js": "^4.3.0",
     "quickhull3d": "^2.1.0",
     "three": "^0.151.3"
+  },
+  "scripts": {
+    "copy-files": "copyfiles -u 1 static/*.jpg static/*.png dist/static/",
+    "buildRes": "npx vite build && npm run copy-files"
   }
 }

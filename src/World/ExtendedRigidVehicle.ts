@@ -24,6 +24,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     vehicleMass: number = 0;
     wheelMass: number = 0;
     id: number;
+    prevVelocity: number = 0;
     wheelMaterial = new THREE.MeshLambertMaterial({
         color: 0x191919
     });
@@ -136,8 +137,8 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
                 this.activeWheels.push(this.vehicleGen.wheels[i]);
 
-                if (lowestWheelPosition > (this.vehicleGen.wheels[i].posY - this.vehicleGen.wheels[i].radius)) {
-                    lowestWheelPosition = (this.vehicleGen.wheels[i].posY - this.vehicleGen.wheels[i].radius);
+                if (lowestWheelPosition > (this.wheelBodies[i].position.y - this.vehicleGen.wheels[i].radius)) {
+                    lowestWheelPosition = (this.wheelBodies[i].position.y - this.vehicleGen.wheels[i].radius);
                 }
             }
         }
@@ -237,12 +238,13 @@ export class ExtendedRigidVehicle extends RigidVehicle {
 
         this.addWheel({
             body: wheelBody,
-            position: this.getCorrectWheelPosition(positionX, positionY, positionZ),
+            position: this.getWheelPosition(positionX, positionY, positionZ, radius, useRealisticWheels ? width : radius),
             axis: new CANNON.Vec3(0, 0, -1)
         });
 
         //set Stiffness
         this.constraints[this.wheelBodies.length - 1].equations[1].setSpookParams(1000000 + 10000000 * stiffness, 4, 1 / 60);
+        this.constraints[this.wheelBodies.length - 1].equations[2].setSpookParams(10000000000000, 1, 1 / 60);
 
         this.vehicleMass += wheelMass;
         this.wheelMass = this.wheelMass + wheelMass;
@@ -301,7 +303,6 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @return true if and only if the car should be disabled.
      */
     advanceTimeoutAndPosition(timeOut: number, yBorder: number, finishLine: number): boolean {
-
         const posBody = this.chassisBody.position;
 
         //A car needs to move to the next 'full' meter during the timeOut duration to not get timed-out.
@@ -325,6 +326,14 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             }
         }
 
+        if (this.chassisBody.velocity.length() - this.prevVelocity > 3) {
+            console.log("A vehicle might have bugged. Removing it just to be safe... vehicleGen follows:");
+            let temp = toSplitArray(this.vehicleGen);
+            console.log(temp[0] + '|' + temp[1]);
+            return true;
+        }
+
+        this.prevVelocity = this.chassisBody.velocity.length();
         //Return true if this car has fallen off the track and should be disabled
         return posBody.y <= yBorder;
     }
@@ -385,7 +394,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         const material = this.lineMaterial;
         const lines = new THREE.Line(test, material);
 
-        let floatVertices = new Float32Array(convertedVertices); //TODO This may cause flickering cause of float precision loss
+        let floatVertices = new Float32Array(convertedVertices);
 
         let geometry = new THREE.BufferGeometry();
         geometry.setAttribute('position', new THREE.BufferAttribute(floatVertices, 3));
@@ -414,7 +423,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             let wheelMass = this.wheelBodies[i].mass;
 
             let maxSpeed = 10;
-            let wheelForce = Math.max(0, -((currentSpeed - maxSpeed) * (currentSpeed - maxSpeed) * (currentSpeed - maxSpeed)) * wheelMass / 10 + 65 * wheelMass);
+            let wheelForce = Math.max(0, -((currentSpeed - maxSpeed) * (currentSpeed - maxSpeed) * (currentSpeed - maxSpeed)) * wheelMass / 20 + 65 * wheelMass);
 
             if (this.wheelMass > this.bodyMass) {
                 wheelForce = wheelForce * (1 - (1 + this.wheelMass)/this.vehicleMass);
@@ -446,9 +455,9 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     }
 
     private adjustPosition() {
-        this.chassisBody.position.set(0, -this.lowestPoint + 1.5, 0);
+        this.chassisBody.position.set(0, -this.lowestPoint + 1, 0);
         this.wheelBodies.forEach(wheel => {
-            wheel.position.y += -this.lowestPoint + 1.5;
+            wheel.position.y += -this.lowestPoint + 1;
         })
     }
 
@@ -460,7 +469,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param y
      * @param z
      */
-    private getCorrectWheelPosition(x: number, y: number , z: number): CANNON.Vec3 {
+    private getWheelPosition(x: number, y: number , z: number, radius: number, width: number): CANNON.Vec3 {
         let closest = new CANNON.Vec3(100,100,100);
         this.chassisBody.shapes.forEach(shape => {
             if (shape instanceof CANNON.ConvexPolyhedron) {
@@ -476,6 +485,10 @@ export class ExtendedRigidVehicle extends RigidVehicle {
                 }
             }
         })
+
+        //adjust position by width and radius
+        let adjust = 1 + (radius > width ? width : radius) / closest.length();
+        closest.scale(adjust, closest);
 
         return closest;
     }

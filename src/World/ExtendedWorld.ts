@@ -64,9 +64,7 @@ export class ExtendedWorld extends World {
     cameraFocus: Mesh = new Mesh();
     cannonDebugRenderer: any;
     groundMaterial: CANNON.Material = new CANNON.Material('groundMaterial');
-    wheelMaterialLowFriction: CANNON.Material = new CANNON.Material('lowFriction');
-    wheelMaterialMediumFriction: CANNON.Material = new CANNON.Material('mediumFriction');
-    wheelMaterialHighFriction: CANNON.Material = new CANNON.Material('highFriction');
+    wheelMaterialFriction: CANNON.Material = new CANNON.Material('friction');
     bodyMaterial: CANNON.Material = new CANNON.Material('bodyMaterial');
     carIdCounter: number = 0;
     id: number;
@@ -128,11 +126,10 @@ export class ExtendedWorld extends World {
         this.leadingCar.chassisBody.position.set(-1, 0, 0);
 
         //Uncomment to enable debugging.
-        /*
         if (scene) {
             this.cannonDebugRenderer = CannonDebugger(scene, this);
         }
-         */
+
     }
 
     /**
@@ -168,7 +165,7 @@ export class ExtendedWorld extends World {
         let vehicle = new ExtendedRigidVehicle(
             vehicleGenome,
             this.bodyMaterial,
-            this.wheelMaterialHighFriction,
+            this.wheelMaterialFriction,
             this.useRealisticWheels,
             this.render ? scene : undefined,
             this.carIdCounter++
@@ -187,7 +184,7 @@ export class ExtendedWorld extends World {
             let vehicle = new ExtendedRigidVehicle(
                 vehicleGenome,
                 this.bodyMaterial,
-                this.wheelMaterialHighFriction,
+                this.wheelMaterialFriction,
                 this.useRealisticWheels,
                 undefined,
                 this.carIdCounter++
@@ -308,29 +305,14 @@ export class ExtendedWorld extends World {
         this.defaultContactMaterial.friction = 1;
 
         let wheelGroundOptions = {
-            friction: 0.5,
+            friction: 1,
             restitution: 0.1,
-            contactEquationRelaxation: 3,
-            frictionEquationStiffness: 1000
+            contactEquationRelaxation: 1,
+            frictionEquationStiffness: 10000000
         };
 
-        wheelGroundOptions.friction = 0.2;
-        let wheelGroundContactMaterialLowFriction = new CANNON.ContactMaterial(
-            this.wheelMaterialLowFriction,
-            this.groundMaterial,
-            wheelGroundOptions
-        );
-
-        wheelGroundOptions.friction = 0.5;
-        let wheelGroundContactMaterialMediumFriction = new CANNON.ContactMaterial(
-            this.wheelMaterialMediumFriction,
-            this.groundMaterial,
-            wheelGroundOptions
-        );
-
-        wheelGroundOptions.friction = 0.6;
-        let wheelGroundContactMaterialHighFriction = new CANNON.ContactMaterial(
-            this.wheelMaterialHighFriction,
+        let wheelGroundContactMaterialFriction = new CANNON.ContactMaterial(
+            this.wheelMaterialFriction,
             this.groundMaterial,
             wheelGroundOptions
         );
@@ -341,9 +323,7 @@ export class ExtendedWorld extends World {
             bodyGroundOptions
         );
 
-        this.addContactMaterial(wheelGroundContactMaterialLowFriction);
-        this.addContactMaterial(wheelGroundContactMaterialMediumFriction);
-        this.addContactMaterial(wheelGroundContactMaterialHighFriction);
+        this.addContactMaterial(wheelGroundContactMaterialFriction);
         this.addContactMaterial(bodyGroundContactMaterial);
     }
 
@@ -358,14 +338,14 @@ export class ExtendedWorld extends World {
      * @param trackTexture defines the visual representation of the track.
      * @param scene
      */
-    initTrackWithGradients(gradients: number[], length: number, width: number, trackTexture: THREE.MeshStandardMaterial, scene) {
+    initTrackWithGradients(gradients: number[], length: number, width: number, trackTexture: THREE.MeshStandardMaterial | undefined, scene) {
         length = length/2;
         this.track.trackWidth = width / 2;
         let trackThickness = 1
 
         let rotateParallelToZAxis: CANNON.Quaternion;
 
-        let trackPieceShape = new CANNON.Box(new CANNON.Vec3(length, trackThickness, this.track.trackWidth));
+        let trackPieceShape = new CANNON.Box(new CANNON.Vec3(length + 0.1, trackThickness, this.track.trackWidth));
         let lowestTrackPoint: number = 0;
 
         //The Track always starts on a 10m * width plane to allow the cars to spawn correctly
@@ -382,7 +362,14 @@ export class ExtendedWorld extends World {
 
         if (this.render) {
             let geometry = new THREE.BoxGeometry(10 * 2, trackThickness * 2, this.track.trackWidth * 2); // double chasis shape
-            let trackStartVisual = new THREE.Mesh(geometry, trackTexture);
+            let trackStartVisual;
+            if (trackTexture) {
+                trackStartVisual = new THREE.Mesh(geometry, trackTexture);
+            } else {
+                trackStartVisual = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({
+                    color: 	"#696969"
+                }))
+            }
 
             this.copyPosition(trackStart, trackStartVisual);
 
@@ -445,7 +432,14 @@ export class ExtendedWorld extends World {
             if (this.render) {
 
                 let geometry = new THREE.BoxGeometry(length * 2, trackThickness * 2, this.track.trackWidth * 2); // double chasis shape
-                let trackVisual = new THREE.Mesh(geometry, trackTexture);
+                let trackVisual;
+                if (trackTexture) {
+                    trackVisual = new THREE.Mesh(geometry, trackTexture);
+                } else {
+                    trackVisual = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({
+                        color: 	"#696969"
+                    }))
+                }
 
                 const posBody = trackPiece.position;
                 trackVisual.position.set(posBody.x, posBody.y, posBody.z);

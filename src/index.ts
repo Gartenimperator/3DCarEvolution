@@ -24,10 +24,10 @@ let materialDynamic, materialStatic;
 // Physics variables
 let currentWorld: ExtendedWorld;
 let groundBodyContactMaterialOptions = {
-    friction: 0.8,
-    restitution: 0.1,
-    contactEquationRelaxation: 3,
-    frictionEquationStiffness: 1000
+    friction: 0.6,
+    restitution: 0.2,
+    contactEquationRelaxation: 10,
+    frictionEquationStiffness: 100000
 };
 let worldOptions = {
     allowSleep: true,
@@ -59,7 +59,7 @@ let trackGradients: number[] = simpleTrack;
 let trackPieceLength = 5;
 let trackPieceWidth = 200;
 const textureLoader = new THREE.TextureLoader();
-let trackTexture: THREE.MeshStandardMaterial;
+let trackTexture: THREE.MeshStandardMaterial | undefined;
 
 //Genetic-Algorithm global variables
 let amountOfWorlds: number = 1;
@@ -84,7 +84,7 @@ let fastForward: boolean = false;
 
 let userVehicle: vehicleGenome | undefined;
 
-let vehicleInputExample: string = '0,0,0,5,0,0,5,0,2,0,0,2,2,4,1, 2, -4,1|2,1,1,0.5,4,-5,2,0,1,0.4,1,1,-3,-5,1,0,2,1,1,1,4,-5,-2,0,1,0.4,1,1,-3,-5,-1,0';
+let vehicleInputExample: string = '0,0,0,5,0,0,5,0,2,0,0,2,2,4,1, 2, -4,1|2,1,1,0.5,4,-5,2,0,1,2,1,1,-3,-5,1,0,2,1,1,1,4,-5,-2,0,1,2,2,1,-3,-5,-1,0';
 
 /**
  * WorldManager
@@ -439,11 +439,15 @@ function initGraphics() {
         stats.domElement.style.top = '10px';
         stats.domElement.style.left = '10px';
         container.appendChild(stats.domElement);
-
         container.appendChild(renderer.domElement);
     }
+}
 
-    const trackAsphaltTexture = textureLoader.load('./src/static/cardboard-texture.jpg');
+function initTrackTexture() {
+
+
+
+    const trackAsphaltTexture = textureLoader.load('./static/cardboard-texture.jpg');
     trackAsphaltTexture.wrapS = THREE.RepeatWrapping;
     trackAsphaltTexture.wrapT = THREE.RepeatWrapping;
     trackAsphaltTexture.repeat = new THREE.Vector2(5, 5);
@@ -464,7 +468,7 @@ function initGraphics() {
 function updatePhysics() {
     currentWorld.extendedStep(frameTime, timeOut);
     //Update cannon debug renderer here for debug.
-    //currentWorld.cannonDebugRenderer.update();
+    currentWorld.cannonDebugRenderer.update();
     if (!currentWorld.isActive()) {
         let temp = <HTMLButtonElement>document.getElementById("stopBtn");
         temp.disabled = true;
@@ -516,6 +520,6 @@ for (var i = 0; i <= 50; i++) {
 }
 
 vehicleInput.value = vehicleInputExample;
-
+initTrackTexture();
 startSimulation();
 render();
