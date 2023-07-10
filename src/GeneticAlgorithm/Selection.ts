@@ -1,12 +1,18 @@
 import {fitnessData} from "../World/PopulationManager";
 import {random} from "../Utils/MathHelper";
+import {toSplitArray} from "../Utils/VehicleGenArrayHelper";
+import {arrayEquals} from "../Utils/Equals";
 
 export function tournamentSelection(fitnessData: fitnessData[]): fitnessData[] {
     let parent1 = tournamentSelectionHelper(fitnessData, 2);
     let parent2 = tournamentSelectionHelper(fitnessData, 2);
 
-    while (fitnessData.length > 1 && parent1 == parent2) {
+    let temp = toSplitArray(parent1.oldVehicleGen);
+    let temp2 = toSplitArray(parent2.oldVehicleGen);
+
+    while (fitnessData.length > 2 && arrayEquals(temp[0], temp2[0]) && arrayEquals(temp[1], temp2[1])) {
         parent2 = tournamentSelectionHelper(fitnessData, 1);
+        temp2 = toSplitArray(parent2.oldVehicleGen);
     }
 
     return [parent1, parent2];
@@ -32,7 +38,10 @@ export function rouletteWheelSelection(fitnessData: fitnessData[], fitnessSum: n
     let parent1 = rouletteSelectionHelper(fitnessData, fitnessSum);
     let parent2 = rouletteSelectionHelper(fitnessData, fitnessSum);
 
-    while (fitnessData.length > 1 && parent1 == parent2) {
+    let temp0 = toSplitArray(parent1.oldVehicleGen);
+    let temp2 = toSplitArray(fitnessData[1].oldVehicleGen);
+
+    while (fitnessData.length > 2 && arrayEquals(temp0[0], temp2[0]) && arrayEquals(temp0[1], temp2[1])) {
 
         let temp = fitnessData.filter(item => item !== parent2);
         parent2 = rouletteSelectionHelper(temp, fitnessSum - parent2.fitness);

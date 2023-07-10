@@ -39,8 +39,9 @@ export class PopulationManager {
      * Disable the given vehicle.
      * @param car to disable.
      * @param stepNumber at which the car is disabled.
+     * @param trackLength
      */
-    disableCar(car: ExtendedRigidVehicle, stepNumber: number): boolean {
+    disableCar(car: ExtendedRigidVehicle, stepNumber: number, trackLength: number): boolean {
         if (this.activeCars.delete(car.id)) {
             car.disable();
             this.fitnessData.push(
@@ -50,7 +51,7 @@ export class PopulationManager {
                     distanceTraveled: car.furthestPosition.x,
                     hasFinished: car.hasFinished,
                     timeInSteps: stepNumber,
-                    fitness: calculateFitness(stepNumber, car.hasFinished, car.furthestPosition.x, car.bodyMass, car.wheelMass),
+                    fitness: calculateFitness(stepNumber, car.hasFinished, car.furthestPosition.x, trackLength, car.bodyMass, car.wheelMass),
                 }
             )
         } else {

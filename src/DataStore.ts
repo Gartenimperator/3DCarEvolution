@@ -136,7 +136,6 @@ export class DataStore {
                                         string += `\nDied after ${roundToFour(data.timeInSteps / 60)} seconds :(.`;
                                     }
                                     string += `\nAverage speed: ${roundToFour(data.distanceTraveled / (data.timeInSteps / 60))} meters per second.`
-                                    string += `\n   (${roundToFour((data.distanceTraveled / (data.timeInSteps / 60)) / 3.6)} kilometers per hour)`
                                     return string;
                                 }
                             }

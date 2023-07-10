@@ -50,15 +50,16 @@ let nowWorking: number[] = [0, 10, 0, 0, 45, -45, -90, 180, -90, 0, 0, 0, 0, -11
 let example: number[] = [0, 20, 90, 180, -90, -90, -150, 0, 0, 0];
 let tumble: number[] = [-30, -30, -30, -30, -30, -30, -30, -30, -90, -90, -90, -90, -90, -90, -90, 0, 0, 0, 90, 90, 90, 90, -30, -30, -30, -30];
 let simpleTrack: number[] = [0, 0, 0, 0, 15, 10, 0, 10, 0, 10, 0, 20, 20, 10, -20, 0, -30, 0, 10, 20, 30, 20, 30, 40, 30, 20, -20, 0, 20, 30, -40, 0, 0, 10, 30, 40, 50, 40, 30, 0, -20, -30, -30, -30, -20, -10, 0, 10, 20, 30, 40, 0, 0, 0, -12, -35, 0, 0, 0];
+
 /**
  * Include hurdles. May be spheres placed into the track. cylinder or convexCustomShape better?
  * CHeck for performance issues -> limit hurdles? how to regulate placement of hurdles?
  */
-
 let trackGradients: number[] = simpleTrack;
 let trackPieceLength = 5;
 let trackPieceWidth = 200;
 const textureLoader = new THREE.TextureLoader();
+let trackAsphaltTexture: any;
 let trackTexture: THREE.MeshStandardMaterial | undefined;
 
 //Genetic-Algorithm global variables
@@ -142,12 +143,10 @@ function updateButtons(disableStopBtn: boolean, disableContinueBtn: boolean, dis
 }
 
 function next() {
-    currentWorld?.cleanUpCurrentGeneration(true, scene);
+    currentWorld?.finishCurrentGen();
+
     if (!fastForward) {
         updateGraphics();
-    } else {
-        renderer?.dispose();
-        scene?.clear();
     }
 
     currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions, fastForward, batchSize, amountOfBatches, mutationRate, parseInt(selectionTypeSelect.value), parseInt(crossOverTypeSelect.value), !realisticWheelsCheckbox.checked, userVehicle);
@@ -390,12 +389,33 @@ updateVariablesBtn.addEventListener('click', updateVariables);
 vehicleInputBtn.addEventListener('click', parseInputVehicle);
 printDataBtn.addEventListener('click', logData);
 
-/**
- * Init Functions
- */
+
+function cleanUpOldObjects() {
+    // traverse the scene for all disposables
+    scene.traverse(function(obj) {
+        // dispose geometry
+        if (obj.geometry) {
+            obj.geometry.dispose();
+        }
+        // dispose materials
+        if (obj.material) {
+            // a mesh's material may be an array
+            if (Array.isArray(obj.material)) {
+                obj.material.forEach(function(mtl) {
+                    mtl.dispose();
+                })
+            } else {
+                obj.material.dispose();
+            }
+        }
+    });
+
+    trackAsphaltTexture.dispose();
+}
 
 function updateGraphics() {
 
+    cleanUpOldObjects();
     scene.clear();
 
     camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 500);
@@ -404,17 +424,17 @@ function updateGraphics() {
     camera.position.z = 0;
     camera.lookAt(new THREE.Vector3(0, 3, 0));
 
-    let ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    let ambientLight = new THREE.AmbientLight(0xffffff, 1);
     scene.add(ambientLight);
 
-    let dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    let dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
     dirLight.position.set(20, 20, 5);
     scene.add(dirLight);
 
-    let dirLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+    let dirLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
     dirLight2.position.set(20, 20, 60);
     scene.add(dirLight2);
-    let dirLight3 = new THREE.DirectionalLight(0xffffff, 0.3);
+    let dirLight3 = new THREE.DirectionalLight(0xffffff, 0.5);
     dirLight3.position.set(20, 20, -60);
     scene.add(dirLight3);
 }
@@ -449,7 +469,7 @@ function initGraphics() {
 }
 
 function initTrackTexture() {
-    const trackAsphaltTexture = textureLoader.load('./static/cardboard-texture.jpg');
+    trackAsphaltTexture = textureLoader.load('./static/cardboard-texture.jpg');
     trackAsphaltTexture.wrapS = THREE.RepeatWrapping;
     trackAsphaltTexture.wrapT = THREE.RepeatWrapping;
     trackAsphaltTexture.repeat = new THREE.Vector2(5, 5);

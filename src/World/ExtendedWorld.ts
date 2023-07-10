@@ -4,7 +4,7 @@ import CannonDebugger from "cannon-es-debugger";
 import {ExtendedRigidVehicle} from "./ExtendedRigidVehicle";
 import {PopulationManager} from "./PopulationManager";
 import {Groups} from "../Utils/Groups";
-import {Mesh} from "three";
+import {Mesh, Object3D} from "three";
 import * as THREE from "three";
 import {createRandomCar} from "../VehicleModel/VehicleGeneration";
 
@@ -292,7 +292,7 @@ export class ExtendedWorld extends World {
      * @param vehicle to be removed.
      */
     removeVehicle(vehicle: ExtendedRigidVehicle) {
-        if (this.populationManager.disableCar(vehicle, this.stepnumber)) {
+        if (this.populationManager.disableCar(vehicle, this.stepnumber, this.track.finishPosition.x)) {
             vehicle.removeFromWorld(this);
         }
     }
@@ -471,12 +471,10 @@ export class ExtendedWorld extends World {
     /**
      * Removes the soon-to-be old THREE.Meshes of each vehicle.
      */
-    cleanUpCurrentGeneration(removeTrack: boolean, scene: THREE.Scene | undefined) {
-
+    finishCurrentGen() {
+        //Disable all cars first in case the simulation was prematurely stopped.
         this.populationManager.activeCars.forEach(vehicle => {
             this.removeVehicle(vehicle);
         })
-        this.populationManager.activeCars.clear();
-        scene?.clear();
     }
 }
