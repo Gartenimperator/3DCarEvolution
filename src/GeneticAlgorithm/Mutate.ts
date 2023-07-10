@@ -6,11 +6,11 @@ import {random} from "../Utils/MathHelper";
 export function mutate(vehicleGen: vehicleGenome, mutationRate: number): vehicleGenome {
     
     function mutate(): boolean {
-        return Math.random() < mutationRate;
+        return Math.random() <= mutationRate;
     }
 
     let maxMutationValue = 2;
-    //increase/decrease random vector variable by up to 1 Meter.
+    //increase/decrease random vector variable by up to 2 Meters.
     vehicleGen.bodyVectors.forEach(vector => {
         if (mutate()) {
             vector.x = vector.x + random(-1, 1) * maxMutationValue;
@@ -23,7 +23,7 @@ export function mutate(vehicleGen: vehicleGenome, mutationRate: number): vehicle
         }
     })
 
-    //increase/decrease random vector variable by up to 50 centimeters.
+    //increase/decrease random vector variable by up to 1 meter.
     vehicleGen.wheels.forEach(wheel => {
         if (mutate()) {
             wheel.radius = Math.max(vehGenConstants.minimalRadius, wheel.radius + random(-1, 1) * maxMutationValue / 2);

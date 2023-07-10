@@ -243,8 +243,8 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         });
 
         //set Stiffness
-        this.constraints[this.wheelBodies.length - 1].equations[1].setSpookParams(1000000 + 10000000 * stiffness, 4, 1 / 60);
-        this.constraints[this.wheelBodies.length - 1].equations[2].setSpookParams(10000000000000, 1, 1 / 60);
+        this.constraints[this.wheelBodies.length - 1].equations[1].setSpookParams(10000 + 1000000 * stiffness, 4, 1 / 60);
+        this.constraints[this.wheelBodies.length - 1].equations[2].setSpookParams(1000000000, 1, 1 / 60);
 
         this.vehicleMass += wheelMass;
         this.wheelMass = this.wheelMass + wheelMass;
@@ -326,10 +326,10 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             }
         }
 
-        if (this.chassisBody.velocity.length() - this.prevVelocity > 3) {
-            console.log("A vehicle might have bugged. Removing it just to be safe... vehicleGen follows:");
-            let temp = toSplitArray(this.vehicleGen);
-            console.log(temp[0] + '|' + temp[1]);
+        if (this.chassisBody.velocity.length() - this.prevVelocity > 5) {
+            // console.log("A vehicle might have bugged. Removing it just to be safe... vehicleGen follows:");
+            // let temp = toSplitArray(this.vehicleGen);
+            // console.log(temp[0] + '|' + temp[1]);
             return true;
         }
 
@@ -422,11 +422,14 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             let currentSpeed = this.wheelBodies[i].angularVelocity.length();
             let wheelMass = this.wheelBodies[i].mass;
 
-            let maxSpeed = 10;
-            let wheelForce = Math.max(0, -((currentSpeed - maxSpeed) * (currentSpeed - maxSpeed) * (currentSpeed - maxSpeed)) * wheelMass / 20 + 65 * wheelMass);
+            let wheelForce = Math.max(0, 500 + 5 * this.bodyMass + ((wheelMass + 50) * 90) - (wheelMass * (wheelMass / 7) * currentSpeed));
+
+            if (currentSpeed > 40) {
+                wheelForce = 0;
+            }
 
             if (this.wheelMass > this.bodyMass) {
-                wheelForce = wheelForce * (1 - (1 + this.wheelMass)/this.vehicleMass);
+                wheelForce = wheelForce * (1 - (this.wheelMass / this.vehicleMass));
             }
 
             wheelForce = wheel.canSteer ? wheelForce * 0.7 : wheelForce;

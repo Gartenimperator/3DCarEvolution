@@ -50,7 +50,7 @@ export class PopulationManager {
                     distanceTraveled: car.furthestPosition.x,
                     hasFinished: car.hasFinished,
                     timeInSteps: stepNumber,
-                    fitness: calculateFitness(stepNumber, car.hasFinished, car.furthestPosition.x, car.vehicleMass, car.wheelMass),
+                    fitness: calculateFitness(stepNumber, car.hasFinished, car.furthestPosition.x, car.bodyMass, car.wheelMass),
                 }
             )
         } else {
@@ -60,7 +60,9 @@ export class PopulationManager {
         return true;
     }
 
-    createNextGeneration(mutationRate: number): vehicleGenome[] {
-        return createNextGeneration(mutationRate, this.fitnessData);
+    createNextGeneration(mutationRate: number,
+                         selectionType: number,
+                         crossoverType: number): vehicleGenome[] {
+        return createNextGeneration(mutationRate, this.fitnessData, selectionType, crossoverType);
     }
 }

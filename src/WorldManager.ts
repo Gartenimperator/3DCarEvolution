@@ -44,6 +44,8 @@ export class WorldManager {
          batchSize: number,
          amountOfBatches: number,
          mutationRate: number,
+         selectionType: number,
+         crossoverType: number,
          useRealisticWheels: boolean,
          userVehicle: vehicleGenome | undefined
     ) {
@@ -51,7 +53,7 @@ export class WorldManager {
             this.currentBatch++;
         } else {
             this.dataStore.pushData(this.currentPopulationManager.fitnessData, this.currentGen);
-            this.populationStore.set(this.worldCounter, this.currentPopulationManager.createNextGeneration(mutationRate));
+            this.populationStore.set(this.worldCounter, this.currentPopulationManager.createNextGeneration(mutationRate, selectionType, crossoverType));
             this.lastBatchSize = this.batchSize;
             this.lastBatchAmount = this.batchAmount;
             this.batchSize = batchSize;

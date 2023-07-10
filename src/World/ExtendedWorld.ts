@@ -122,12 +122,12 @@ export class ExtendedWorld extends World {
         this.leadingCar = new ExtendedRigidVehicle({
             bodyVectors: [],
             wheels: []
-        }, undefined, undefined, true, undefined, -1);
+        }, undefined, undefined, useRealisticWheels, undefined, -1);
         this.leadingCar.chassisBody.position.set(-1, 0, 0);
 
         //Uncomment to enable debugging.
         if (scene) {
-            this.cannonDebugRenderer = CannonDebugger(scene, this);
+            //this.cannonDebugRenderer = CannonDebugger(scene, this);
         }
 
     }

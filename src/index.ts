@@ -64,14 +64,12 @@ let trackTexture: THREE.MeshStandardMaterial | undefined;
 //Genetic-Algorithm global variables
 let amountOfWorlds: number = 1;
 
-let batchSize: number = 10;
-let amountOfBatches: number = 1;
+let batchSize: number = 25;
+let amountOfBatches: number = 8;
 
-let mutationRate = 0.05;
+let mutationRate = 0.01;
 
 let timeOut: number = 300;
-
-let currentGen = 0;
 
 /**
  * Controller variables
@@ -84,7 +82,7 @@ let fastForward: boolean = false;
 
 let userVehicle: vehicleGenome | undefined;
 
-let vehicleInputExample: string = '0,0,0,5,0,0,5,0,2,0,0,2,2,4,1, 2, -4,1|2,1,1,0.5,4,-5,2,0,1,2,1,1,-3,-5,1,0,2,1,1,1,4,-5,-2,0,1,2,2,1,-3,-5,-1,0';
+let vehicleInputExample: string = '0,0,0,5,0,0,5,0,2,0,0,2,2,4,1, 2, -4,1|2,1,1,0.5,4,-1,0.5,0,1,2,1,1,-3,-5,1,0,2,1,1,1,4,-5,-2,0,1,2,2,1,-3,-5,-1,0';
 
 /**
  * WorldManager
@@ -123,6 +121,8 @@ let vehicleInput = <HTMLInputElement>document.getElementById('vehicleInput')!;
 let vehicleInputBtn = <HTMLButtonElement>document.getElementById('addVehicleBtn')!;
 let vehicleInputConfirmation = document.getElementById('vehicleInputConfirmation')!;
 let vehicleInputError = document.getElementById('vehicleInputError')!;
+let selectionTypeSelect = <HTMLSelectElement>document.getElementById('selectionTypeSelect')!;
+let crossOverTypeSelect = <HTMLSelectElement>document.getElementById('crossoverTypeSelect')!;
 
 let printDataBtn = <HTMLButtonElement>document.getElementById('printDataBtn')!;
 
@@ -144,10 +144,13 @@ function updateButtons(disableStopBtn: boolean, disableContinueBtn: boolean, dis
 function next() {
     currentWorld?.cleanUpCurrentGeneration(true, scene);
     if (!fastForward) {
-        initGraphics();
+        updateGraphics();
+    } else {
+        renderer?.dispose();
+        scene?.clear();
     }
 
-    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions, fastForward, batchSize, amountOfBatches, mutationRate, !realisticWheelsCheckbox.checked, userVehicle);
+    currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions, fastForward, batchSize, amountOfBatches, mutationRate, parseInt(selectionTypeSelect.value), parseInt(crossOverTypeSelect.value), !realisticWheelsCheckbox.checked, userVehicle);
     userVehicle = undefined;
     currentWorld.initTrackWithGradients(trackGradients, trackPieceLength, trackPieceWidth, trackTexture, scene);
     currentWorld.cameraFocus.add(camera);
@@ -356,7 +359,7 @@ function updateVariables() {
     }
 
     let newMutationRate = parseFloat(mutationRateInput.value);
-    if (newMutationRate > 1 && newMutationRate < 0) {
+    if (newMutationRate > 1 || newMutationRate < 0) {
         canUpdate = false;
         mutationRateInputError.hidden = false;
     }
@@ -391,24 +394,15 @@ printDataBtn.addEventListener('click', logData);
  * Init Functions
  */
 
-function initGraphics() {
+function updateGraphics() {
 
-    renderer?.dispose();
-    scene?.clear();
-    scene = new THREE.Scene();
-
-    container = document.getElementById('simulationWindow');
+    scene.clear();
 
     camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 500);
     camera.position.x = -30;
     camera.position.y = 40;
     camera.position.z = 0;
     camera.lookAt(new THREE.Vector3(0, 3, 0));
-
-    renderer = new THREE.WebGLRenderer({antialias: true});
-    renderer.setClearColor(0xbfd1e5);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth * 0.7, window.innerHeight * 0.7);
 
     let ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
@@ -423,10 +417,18 @@ function initGraphics() {
     let dirLight3 = new THREE.DirectionalLight(0xffffff, 0.3);
     dirLight3.position.set(20, 20, -60);
     scene.add(dirLight3);
+}
 
-    materialDynamic = new THREE.MeshPhongMaterial({color: 0xfca400});
-    materialStatic = new THREE.MeshPhongMaterial({color: 0x999999});
+function initGraphics() {
+    scene = new THREE.Scene();
+    renderer = new THREE.WebGLRenderer({antialias: true});
+    renderer.setClearColor(0xbfd1e5);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth * 0.7, window.innerHeight * 0.7);
 
+    updateGraphics();
+
+    container = document.getElementById('simulationWindow');
     if (container) {
         container.innerHTML = '';
 
@@ -441,12 +443,12 @@ function initGraphics() {
         container.appendChild(stats.domElement);
         container.appendChild(renderer.domElement);
     }
+
+    materialDynamic = new THREE.MeshPhongMaterial({color: 0xfca400});
+    materialStatic = new THREE.MeshPhongMaterial({color: 0x999999});
 }
 
 function initTrackTexture() {
-
-
-
     const trackAsphaltTexture = textureLoader.load('./static/cardboard-texture.jpg');
     trackAsphaltTexture.wrapS = THREE.RepeatWrapping;
     trackAsphaltTexture.wrapT = THREE.RepeatWrapping;
@@ -468,8 +470,8 @@ function initTrackTexture() {
 function updatePhysics() {
     currentWorld.extendedStep(frameTime, timeOut);
     //Update cannon debug renderer here for debug.
-    currentWorld.cannonDebugRenderer.update();
-    if (!currentWorld.isActive()) {
+    //currentWorld.cannonDebugRenderer.update();
+    if (!currentWorld.isActive() && !fastForward) {
         let temp = <HTMLButtonElement>document.getElementById("stopBtn");
         temp.disabled = true;
         temp = <HTMLButtonElement>document.getElementById("continueBtn");
@@ -521,5 +523,6 @@ for (var i = 0; i <= 50; i++) {
 
 vehicleInput.value = vehicleInputExample;
 initTrackTexture();
+initGraphics();
 startSimulation();
 render();

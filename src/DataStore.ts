@@ -185,6 +185,5 @@ export class DataStore {
         console.log("Median: " + median);
         console.log("First: " + first);
         console.log("Last: " + last);
-        console.log("---");
     }
 }
