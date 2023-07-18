@@ -6,7 +6,7 @@ The project was inspired by [http://boxcar2d.com](http://boxcar2d.com/).
 
 A development server can be started by calling
 ```
-npx vite
+vite
 ```
 
 You can build the project as a single javascript file (including the resources and index.html) via
