@@ -144,7 +144,6 @@ function updateButtons(disableStopBtn: boolean, disableContinueBtn: boolean, dis
 
 function next() {
     currentWorld?.finishCurrentGen();
-
     if (!fastForward) {
         updateGraphics();
     }
@@ -156,7 +155,7 @@ function next() {
 }
 
 function updateInfoText() {
-    infoText.innerHTML = 'Generation ' + worldManager.currentGen + '. Currently simulating batch ' + (1 + worldManager.currentBatch) + ' of world ' + worldManager.worldCounter + '.' +
+    infoText.innerHTML = 'Generation ' + worldManager.currentGen + '. Currently simulating batch ' + (1 + worldManager.currentBatch) + '.' +
         '\n Populationsize: ' + (worldManager.batchSize * (worldManager.batchAmount + 1));
     fastForwardInput.value = String(fastForwardCounter);
 }
@@ -424,17 +423,17 @@ function updateGraphics() {
     camera.position.z = 0;
     camera.lookAt(new THREE.Vector3(0, 3, 0));
 
-    let ambientLight = new THREE.AmbientLight(0xffffff, 1);
+    let ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
 
-    let dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    let dirLight = new THREE.DirectionalLight(0xffffff, 1);
     dirLight.position.set(20, 20, 5);
     scene.add(dirLight);
 
-    let dirLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+    let dirLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
     dirLight2.position.set(20, 20, 60);
     scene.add(dirLight2);
-    let dirLight3 = new THREE.DirectionalLight(0xffffff, 0.5);
+    let dirLight3 = new THREE.DirectionalLight(0xffffff, 0.4);
     dirLight3.position.set(20, 20, -60);
     scene.add(dirLight3);
 }

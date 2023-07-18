@@ -42,9 +42,8 @@ export function rouletteWheelSelection(fitnessData: fitnessData[], fitnessSum: n
     let temp2 = toSplitArray(fitnessData[1].oldVehicleGen);
 
     while (fitnessData.length > 2 && arrayEquals(temp0[0], temp2[0]) && arrayEquals(temp0[1], temp2[1])) {
-
-        let temp = fitnessData.filter(item => item !== parent2);
-        parent2 = rouletteSelectionHelper(temp, fitnessSum - parent2.fitness);
+        parent2 = rouletteSelectionHelper(fitnessData.filter(item => item !== parent2), fitnessSum - parent2.fitness);
+        temp2 = toSplitArray(parent2.oldVehicleGen);
     }
 
     return [parent1, parent2];

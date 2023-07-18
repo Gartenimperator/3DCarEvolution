@@ -10,5 +10,5 @@
  */
 export function calculateFitness(stepNumber: number, hasFinished: boolean, distanceTraveled: number, trackLength: number, bodyMass, wheelMass: number): number {
     let relativeDistance = distanceTraveled / trackLength;
-    return hasFinished ? 100 + 5 * distanceTraveled * 60 / stepNumber : 100 * relativeDistance + relativeDistance * distanceTraveled * 60 / stepNumber;
+    return hasFinished ? 100 + 5 * trackLength * 60 / stepNumber : 100 * relativeDistance + relativeDistance * distanceTraveled * 60 / stepNumber; 
 }
