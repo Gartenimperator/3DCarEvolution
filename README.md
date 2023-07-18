@@ -9,7 +9,7 @@ A development server can be started by calling
 npx vite
 ```
 
-You can build the project as a single javascript file (including the resources) via
+You can build the project as a single javascript file (including the resources and index.html) via
 ```
 npm run buildRes
 ```
