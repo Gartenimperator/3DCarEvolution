@@ -413,7 +413,6 @@ function cleanUpOldObjects() {
 }
 
 function updateGraphics() {
-
     cleanUpOldObjects();
     scene.clear();
 
