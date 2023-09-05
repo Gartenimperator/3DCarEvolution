@@ -263,11 +263,13 @@ function parseInputVehicle() {
                     newGen.bodyVectors.push(new CANNON.Vec3(x, y, z));
                 } else {
                     vehicleInputError.hidden = false;
+                    vehicleInputConfirmation.hidden = true;
                     return;
                 }
             }
         } else {
             vehicleInputError.hidden = false;
+            vehicleInputConfirmation.hidden = true;
             return;
         }
 
@@ -288,6 +290,7 @@ function parseInputVehicle() {
         } else {
             if (!(wheelVectors[0] == '')) {
                 vehicleInputError.hidden = false;
+                vehicleInputConfirmation.hidden = true;
                 return;
             }
         }
