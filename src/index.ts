@@ -81,7 +81,7 @@ let isPaused = false;
 let fastForwardCounter: number = 0;
 let fastForward: boolean = false;
 
-let userVehicle: vehicleGenome | undefined;
+let userVehicle: vehicleGenome[] = [];
 
 let vehicleInputExample: string = '0,0,0,5,0,0,5,0,2,0,0,2,2,4,1, 2, -4,1|2,1,1,0.5,4,-1,0.5,0,1,2,1,1,-3,-5,1,0,2,1,1,1,4,-5,-2,0,1,2,2,1,-3,-5,-1,0';
 
@@ -149,7 +149,7 @@ function next() {
     }
 
     currentWorld = worldManager.next(scene, worldOptions, gravity, groundBodyContactMaterialOptions, fastForward, batchSize, amountOfBatches, mutationRate, parseInt(selectionTypeSelect.value), parseInt(crossOverTypeSelect.value), !realisticWheelsCheckbox.checked, userVehicle);
-    userVehicle = undefined;
+    userVehicle = [];
     currentWorld.initTrackWithGradients(trackGradients, trackPieceLength, trackPieceWidth, trackTexture, scene);
     currentWorld.cameraFocus.add(camera);
 }
@@ -248,59 +248,68 @@ function parseInputVehicle() {
         bodyVectors: [],
         wheels: []
     };
-    let input: String[] = vehicleInput.value.split('|');
-    if (input.length === 2) {
-        let bodyVectors = input[0].split(',');
-        let wheelVectors = input[1].split(',');
 
-        if (bodyVectors.length % 3 === 0 && bodyVectors.length >= 12) {
-            for (let i = 0; i < bodyVectors.length; i += 3) {
-                let x = parseFloat(bodyVectors[i]);
-                let y = parseFloat(bodyVectors[i + 1]);
-                let z = parseFloat(bodyVectors[i + 2]);
+    let newUserVehicles: vehicleGenome[] = [];
+    let cars: String[] = vehicleInput.value.split(';');
+    console.log(cars);
+    for (let i = 0; cars.length > i; i++) {
+        console.log("here01");
+        let input: String[] = cars[i].split('|');
+        if (input.length === 2) {
+            let bodyVectors = input[0].split(',');
+            let wheelVectors = input[1].split(',');
 
-                if (-20 < x && 20 > x && -20 < y && 20 > y && -20 < z && 20 > z) {
-                    newGen.bodyVectors.push(new CANNON.Vec3(x, y, z));
-                } else {
+            if (bodyVectors.length % 3 === 0 && bodyVectors.length >= 12) {
+                for (let i = 0; i < bodyVectors.length; i += 3) {
+                    let x = parseFloat(bodyVectors[i]);
+                    let y = parseFloat(bodyVectors[i + 1]);
+                    let z = parseFloat(bodyVectors[i + 2]);
+
+                    if (-20 < x && 20 > x && -20 < y && 20 > y && -20 < z && 20 > z) {
+                        newGen.bodyVectors.push(new CANNON.Vec3(x, y, z));
+                    } else {
+                        vehicleInputError.hidden = false;
+                        vehicleInputConfirmation.hidden = true;
+                        return;
+                    }
+                }
+            } else {
+                vehicleInputError.hidden = false;
+                vehicleInputConfirmation.hidden = true;
+                return;
+            }
+
+            if (wheelVectors.length % 8 === 0 && wheelVectors.length >= 8) {
+                for (let i = 0; i < wheelVectors.length; i += 8) {
+                    let wheelGen = {
+                        radius: parseFloat(wheelVectors[i]),
+                        width: parseFloat(wheelVectors[i + 1]),
+                        density: parseFloat(wheelVectors[i + 2]),
+                        stiffness: parseFloat(wheelVectors[i + 3]),
+                        posX: parseFloat(wheelVectors[i + 4]),
+                        posY: parseFloat(wheelVectors[i + 5]),
+                        posZ: parseFloat(wheelVectors[i + 6]),
+                        canSteer: parseInt(wheelVectors[i + 7]) === 1,
+                    };
+                    newGen.wheels.push(wheelGen);
+                }
+            } else {
+                if (!(wheelVectors[0] == '')) {
                     vehicleInputError.hidden = false;
                     vehicleInputConfirmation.hidden = true;
                     return;
                 }
             }
+            newUserVehicles.push(newGen);
         } else {
             vehicleInputError.hidden = false;
-            vehicleInputConfirmation.hidden = true;
             return;
         }
-
-        if (wheelVectors.length % 8 === 0 && wheelVectors.length >= 8) {
-            for (let i = 0; i < wheelVectors.length; i += 8) {
-                let wheelGen = {
-                    radius: parseFloat(wheelVectors[i]),
-                    width: parseFloat(wheelVectors[i + 1]),
-                    density: parseFloat(wheelVectors[i + 2]),
-                    stiffness: parseFloat(wheelVectors[i + 3]),
-                    posX: parseFloat(wheelVectors[i + 4]),
-                    posY: parseFloat(wheelVectors[i + 5]),
-                    posZ: parseFloat(wheelVectors[i + 6]),
-                    canSteer: parseInt(wheelVectors[i + 7]) === 1,
-                };
-                newGen.wheels.push(wheelGen);
-            }
-        } else {
-            if (!(wheelVectors[0] == '')) {
-                vehicleInputError.hidden = false;
-                vehicleInputConfirmation.hidden = true;
-                return;
-            }
-        }
-        vehicleInputError.hidden = true;
-        vehicleInputConfirmation.hidden = false;
-        userVehicle = newGen;
-    } else {
-        vehicleInputError.hidden = false;
-        return;
     }
+    vehicleInputError.hidden = true;
+    vehicleInputConfirmation.hidden = false;
+    userVehicle = newUserVehicles;
+    console.log("here");
 }
 
 function updateVariables() {

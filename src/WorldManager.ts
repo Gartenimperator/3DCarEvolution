@@ -47,7 +47,7 @@ export class WorldManager {
          selectionType: number,
          crossoverType: number,
          useRealisticWheels: boolean,
-         userVehicle: vehicleGenome | undefined
+         userVehicle: vehicleGenome[]
     ) {
         if (this.currentBatch < this.batchAmount) {
             this.currentBatch++;
@@ -72,9 +72,9 @@ export class WorldManager {
         let population = this.populationStore.get(this.worldCounter)?.slice(this.lastBatchSize * this.currentBatch, this.lastBatchSize * this.currentBatch + this.lastBatchSize);
         population = population ? population : [];
 
-        if (userVehicle) {
-            population.pop();
-            population.push(userVehicle);
+        if (userVehicle.length > 0 && userVehicle.length <= this.batchSize) {
+            population = population.slice(this.batchSize - userVehicle.length);
+            population = population.concat(userVehicle);
         }
 
         this.currentWorld = new ExtendedWorld(
