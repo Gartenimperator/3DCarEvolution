@@ -83,7 +83,7 @@ let fastForward: boolean = false;
 
 let userVehicle: vehicleGenome | undefined;
 
-let vehicleInputExample: string = '0,0,0,5,0,0,5,0,2,0,0,2,2,4,1, 2, -4,1|2,1,1,0.5,4,-1,0.5,0,1,2,1,1,-3,-5,1,0,2,1,1,1,4,-5,-2,0,1,2,2,1,-3,-5,-1,0';
+let vehicleInputExample: string = '0,0,0,5,0,0,5,0,2,0,0,2,2,4,1, 2, -4,1|1,2,10,1,-3,-5,1,0,2,1,20,1,4,-5,-2,0,1,2,15,1,-3,-5,-1,0';
 
 /**
  * WorldManager
@@ -538,7 +538,7 @@ function render() {
 for (var i = 0; i <= 50; i++) {
     let temp = document.createElement('span')!;
     temp.innerHTML = '&#9608;';
-    temp.style.color = RainBowColor(vehGenConstants.minDensity + i / 50, vehGenConstants.maxDensity);
+    temp.style.color = RainBowColor(vehGenConstants.minDensity / 10 + i / 50, vehGenConstants.maxDensity / 10);
     document.getElementById('color')!.append(temp);
 }
 

@@ -220,7 +220,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             wheelVolume = Math.PI * width * (radius * radius);
         }
 
-        let wheelMass = wheelVolume * density * 10;
+        let wheelMass = wheelVolume * density;
 
         let wheelBody = new CANNON.Body({
             mass: wheelMass,
@@ -274,7 +274,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             wheelHood.rotateY(Math.PI / 2);
 
             let wheelHoodMaterial = new THREE.MeshLambertMaterial();
-            wheelHoodMaterial.color = new THREE.Color(RainBowColor(density, vehGenConstants.maxDensity));
+            wheelHoodMaterial.color = new THREE.Color(RainBowColor(density / 10, vehGenConstants.maxDensity / 10));
             wheelMesh = new THREE.Mesh(wheelVisual, this.wheelMaterial);
             wheelMesh.add(new THREE.Mesh(wheelHood, wheelHoodMaterial));
             wheelMesh.add(new THREE.Mesh(new THREE.BoxGeometry(radius * 0.6, radius * 0.2, width + 0.15), this.wheelMaterial));
@@ -471,6 +471,8 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param x
      * @param y
      * @param z
+     * @param radius
+     * @param width
      */
     private getWheelPosition(x: number, y: number , z: number, radius: number, width: number): CANNON.Vec3 {
         let closest = new CANNON.Vec3(100,100,100);
