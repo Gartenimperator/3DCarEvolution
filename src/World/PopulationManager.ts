@@ -4,7 +4,6 @@ import {createNextGeneration} from "../GeneticAlgorithm/NextGeneration";
 import {calculateFitness} from "../GeneticAlgorithm/FitnessFunction";
 
 export type fitnessData = {
-    id: number,
     oldVehicleGen: vehicleGenome,
     distanceTraveled: number,
     hasFinished: boolean,
@@ -46,7 +45,6 @@ export class PopulationManager {
             car.disable();
             this.fitnessData.push(
                 {
-                    id: car.id,
                     oldVehicleGen: car.vehicleGen,
                     distanceTraveled: car.furthestPosition.x,
                     hasFinished: car.hasFinished,

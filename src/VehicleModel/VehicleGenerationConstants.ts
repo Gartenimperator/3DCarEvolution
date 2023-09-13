@@ -6,7 +6,7 @@ export namespace vehGenConstants {
     export let maximalRadius = 2;
     export let minimalWidth = 0.2;
     export let maximalWidth = 2;
-    export let minDensity = 0.5;
-    export let maxDensity = 1.5;
+    export let minDensity = 5;
+    export let maxDensity = 20;
     export let maxBodyVectorLength = 7;
 }

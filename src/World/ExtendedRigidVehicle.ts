@@ -35,7 +35,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         color: 0x0000ff
     });
     vehicleGen: vehicleGenome;
-    private faces: number[][]= [];
+    private faces: number[][] = [];
     hasFinished: boolean = false;
     private centeredBodyVectors: CANNON.Vec3[] = [];
     private activeWheels: wheel[] = [];
@@ -75,6 +75,10 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         });
 
         let tempVol = getVolumeAndCentreOfMass(vertices, this.faces);
+
+        if (tempVol[0] === 0) {
+            throw new Error("Body has no volume");
+        }
 
         this.centeredBodyVectors = this.moveBodyCOMTo0AndUpdateLowestPoint(this.vehicleGen.bodyVectors, tempVol[1]);
         let updatedVertices = toNumberArray(this.centeredBodyVectors);
@@ -220,7 +224,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             wheelVolume = Math.PI * width * (radius * radius);
         }
 
-        let wheelMass = wheelVolume * density * 10;
+        let wheelMass = wheelVolume * density;
 
         let wheelBody = new CANNON.Body({
             mass: wheelMass,
@@ -274,7 +278,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             wheelHood.rotateY(Math.PI / 2);
 
             let wheelHoodMaterial = new THREE.MeshLambertMaterial();
-            wheelHoodMaterial.color = new THREE.Color(RainBowColor(density, vehGenConstants.maxDensity));
+            wheelHoodMaterial.color = new THREE.Color(RainBowColor(density / 10, vehGenConstants.maxDensity / 10));
             wheelMesh = new THREE.Mesh(wheelVisual, this.wheelMaterial);
             wheelMesh.add(new THREE.Mesh(wheelHood, wheelHoodMaterial));
             wheelMesh.add(new THREE.Mesh(new THREE.BoxGeometry(radius * 0.6, radius * 0.2, width + 0.15), this.wheelMaterial));
@@ -404,7 +408,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     }
 
     /**
-     * Update the steering angle of each wheel.
+     * Update the steering angle of each wheel and apply power.
      * @param trackWidth width of the track the vehicle is currently driving on.
      */
     updateSteeringAndApplyPower(trackWidth: number): boolean {
@@ -471,15 +475,17 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param x
      * @param y
      * @param z
+     * @param radius
+     * @param width
      */
-    private getWheelPosition(x: number, y: number , z: number, radius: number, width: number): CANNON.Vec3 {
-        let closest = new CANNON.Vec3(100,100,100);
+    private getWheelPosition(x: number, y: number, z: number, radius: number, width: number): CANNON.Vec3 {
+        let closest = new CANNON.Vec3(1000, 1000, 1000);
         this.chassisBody.shapes.forEach(shape => {
             if (shape instanceof CANNON.ConvexPolyhedron) {
                 let planeN = shape.faceNormals[0];
                 let planeP = shape.vertices[0];
-                let point = intersectLineAndPlane([0,0,0], [x, y, z],
-                    [planeP.x, planeP.y, planeP.z],[planeN.x, planeN.y, planeN.z]);
+                let point = intersectLineAndPlane([0, 0, 0], [x, y, z],
+                    [planeP.x, planeP.y, planeP.z], [planeN.x, planeN.y, planeN.z]);
                 if (point) {
                     let vec = new CANNON.Vec3(point[0], point[1], point[2]);
                     if (closest.length() > vec.length()) {
@@ -489,7 +495,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             }
         })
 
-        //adjust position by width and radius
+        //adjust position by width or radius
         let adjust = 1 + (radius > width ? width : radius) / closest.length();
         closest.scale(adjust, closest);
 
