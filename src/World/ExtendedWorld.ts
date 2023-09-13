@@ -2,7 +2,7 @@ import * as CANNON from "cannon-es";
 import {World} from "cannon-es";
 import CannonDebugger from "cannon-es-debugger";
 import {ExtendedRigidVehicle} from "./ExtendedRigidVehicle";
-import {PopulationManager} from "./PopulationManager";
+import {fitnessData, PopulationManager} from "./PopulationManager";
 import {Groups} from "../Utils/Groups";
 import {Mesh, Object3D} from "three";
 import * as THREE from "three";
@@ -161,18 +161,29 @@ export class ExtendedWorld extends World {
      * @param scene
      */
     addCar(vehicleGenome: vehicleGenome, scene: THREE.Scene | undefined) {
+        try {
+            let vehicle = new ExtendedRigidVehicle(
+                vehicleGenome,
+                this.bodyMaterial,
+                this.wheelMaterialFriction,
+                this.useRealisticWheels,
+                this.render ? scene : undefined,
+                this.carIdCounter++
+            );
 
-        let vehicle = new ExtendedRigidVehicle(
-            vehicleGenome,
-            this.bodyMaterial,
-            this.wheelMaterialFriction,
-            this.useRealisticWheels,
-            this.render ? scene : undefined,
-            this.carIdCounter++
-        );
-
-        this.populationManager.addCar(vehicle);
-        vehicle.addToWorld(this);
+            this.populationManager.addCar(vehicle);
+            vehicle.addToWorld(this);
+        } catch (e) {
+            this.populationManager.fitnessData.push(
+                {
+                    oldVehicleGen: vehicleGenome,
+                    distanceTraveled: 0,
+                    hasFinished: false,
+                    timeInSteps: 0,
+                    fitness: 0,
+                }
+            );
+        }
     }
 
     /**

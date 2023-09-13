@@ -35,7 +35,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         color: 0x0000ff
     });
     vehicleGen: vehicleGenome;
-    private faces: number[][]= [];
+    private faces: number[][] = [];
     hasFinished: boolean = false;
     private centeredBodyVectors: CANNON.Vec3[] = [];
     private activeWheels: wheel[] = [];
@@ -75,6 +75,10 @@ export class ExtendedRigidVehicle extends RigidVehicle {
         });
 
         let tempVol = getVolumeAndCentreOfMass(vertices, this.faces);
+
+        if (tempVol[0] === 0) {
+            throw new Error("Body has no volume");
+        }
 
         this.centeredBodyVectors = this.moveBodyCOMTo0AndUpdateLowestPoint(this.vehicleGen.bodyVectors, tempVol[1]);
         let updatedVertices = toNumberArray(this.centeredBodyVectors);
@@ -474,14 +478,14 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param radius
      * @param width
      */
-    private getWheelPosition(x: number, y: number , z: number, radius: number, width: number): CANNON.Vec3 {
-        let closest = new CANNON.Vec3(1000,1000,1000);
+    private getWheelPosition(x: number, y: number, z: number, radius: number, width: number): CANNON.Vec3 {
+        let closest = new CANNON.Vec3(1000, 1000, 1000);
         this.chassisBody.shapes.forEach(shape => {
             if (shape instanceof CANNON.ConvexPolyhedron) {
                 let planeN = shape.faceNormals[0];
                 let planeP = shape.vertices[0];
-                let point = intersectLineAndPlane([0,0,0], [x, y, z],
-                    [planeP.x, planeP.y, planeP.z],[planeN.x, planeN.y, planeN.z]);
+                let point = intersectLineAndPlane([0, 0, 0], [x, y, z],
+                    [planeP.x, planeP.y, planeP.z], [planeN.x, planeN.y, planeN.z]);
                 if (point) {
                     let vec = new CANNON.Vec3(point[0], point[1], point[2]);
                     if (closest.length() > vec.length()) {
