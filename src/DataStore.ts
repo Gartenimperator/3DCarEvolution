@@ -5,7 +5,7 @@
 import Chart from "chart.js/auto";
 import {fitnessData} from "./World/PopulationManager";
 import {roundToFour} from "./VehicleModel/VehicleGeneration";
-import {toGenome, toNumberArray, toSplitArray} from "./Utils/VehicleGenArrayHelper";
+import {toSplitArray} from "./Utils/VehicleGenArrayHelper";
 
 export class DataStore {
     chart: any;
