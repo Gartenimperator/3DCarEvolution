@@ -5,6 +5,7 @@
 import Chart from "chart.js/auto";
 import {fitnessData} from "./World/PopulationManager";
 import {roundToFour} from "./VehicleModel/VehicleGeneration";
+import {toGenome, toNumberArray, toSplitArray} from "./Utils/VehicleGenArrayHelper";
 
 export class DataStore {
     chart: any;
@@ -40,7 +41,8 @@ export class DataStore {
                         distanceTraveled: data.distanceTraveled,
                         hasFinished: data.hasFinished,
                         timeInSteps: data.timeInSteps,
-                        fitness: data.fitness
+                        fitness: data.fitness,
+                        vehGen: toSplitArray(data.oldVehicleGen)
                     }
                 })
             } else {
@@ -52,7 +54,8 @@ export class DataStore {
                                 distanceTraveled: data.distanceTraveled,
                                 hasFinished: data.hasFinished,
                                 timeInSteps: data.timeInSteps,
-                                fitness: data.fitness
+                                fitness: data.fitness,
+                                vehGen: toSplitArray(data.oldVehicleGen)
                             },
                         }],
                         borderColor: 'lightblue',
@@ -80,7 +83,8 @@ export class DataStore {
                 distanceTraveled: median.distanceTraveled / size,
                 hasFinished: (amountOfFinisher / size) > 0.5,
                 timeInSteps: median.timeInSteps / size,
-                fitness: median.fitness / size
+                fitness: median.fitness / size,
+                vehGen: [[]],
             }
         })
 
@@ -180,6 +184,9 @@ export class DataStore {
         this.chart.data.datasets[this.chart.data.datasets.length - 1].data.forEach((data, i) => {
             last += "(" + i + ", " + String(roundToFour(data.fitnessData.fitness)) + "), ";
         })
+
+        let temp = this.chart.data.datasets[1].data[this.chart.data.datasets[1].data.length - 1].fitnessData.vehGen;
+        console.log(temp[0] + '|' + temp[1]);
 
         console.log("Median: " + median);
         console.log("First: " + first);

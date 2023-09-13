@@ -404,7 +404,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
     }
 
     /**
-     * Update the steering angle of each wheel.
+     * Update the steering angle of each wheel and apply power.
      * @param trackWidth width of the track the vehicle is currently driving on.
      */
     updateSteeringAndApplyPower(trackWidth: number): boolean {
@@ -475,7 +475,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
      * @param width
      */
     private getWheelPosition(x: number, y: number , z: number, radius: number, width: number): CANNON.Vec3 {
-        let closest = new CANNON.Vec3(100,100,100);
+        let closest = new CANNON.Vec3(1000,1000,1000);
         this.chassisBody.shapes.forEach(shape => {
             if (shape instanceof CANNON.ConvexPolyhedron) {
                 let planeN = shape.faceNormals[0];
@@ -491,7 +491,7 @@ export class ExtendedRigidVehicle extends RigidVehicle {
             }
         })
 
-        //adjust position by width and radius
+        //adjust position by width or radius
         let adjust = 1 + (radius > width ? width : radius) / closest.length();
         closest.scale(adjust, closest);
 
