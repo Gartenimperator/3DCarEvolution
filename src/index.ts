@@ -550,6 +550,12 @@ for (var i = 0; i <= 50; i++) {
     temp.style.color = RainBowColor(vehGenConstants.minDensity / 10 + i / 50, vehGenConstants.maxDensity / 10);
     document.getElementById('color')!.append(temp);
 }
+let head = document.createElement('span')!;
+let tail = document.createElement('span')!;
+tail.innerHTML = ' Highest Density: 20 m^3/kg ';
+head.innerHTML = ' Lowest Density: 5 m^3/kg ';
+document.getElementById('color')!.prepend(head);
+document.getElementById('color')!.append(tail);
 
 vehicleInput.value = vehicleInputExample;
 initTrackTexture();
