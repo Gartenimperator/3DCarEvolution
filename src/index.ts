@@ -251,9 +251,7 @@ function parseInputVehicle() {
 
     let newUserVehicles: vehicleGenome[] = [];
     let cars: String[] = vehicleInput.value.split(';');
-    console.log(cars);
     for (let i = 0; cars.length > i; i++) {
-        console.log("here01");
         let input: String[] = cars[i].split('|');
         if (input.length === 2) {
             let bodyVectors = input[0].split(',');
@@ -309,7 +307,6 @@ function parseInputVehicle() {
     vehicleInputError.hidden = true;
     vehicleInputConfirmation.hidden = false;
     userVehicle = newUserVehicles;
-    console.log("here");
 }
 
 function updateVariables() {
@@ -468,7 +465,7 @@ function initGraphics() {
 
         stats = Stats();
         stats.domElement.style.position = 'absolute';
-        stats.domElement.style.top = '10px';
+        stats.domElement.style.top = '39px';
         stats.domElement.style.left = '10px';
         container.appendChild(stats.domElement);
         container.appendChild(renderer.domElement);
